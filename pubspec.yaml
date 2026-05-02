@@ -1,0 +1,30 @@
+name: ambal_gold
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.2.1
+  intl: ^0.20.2
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/AMBALLOGO-2.png
+    - assets/images/4614.jpg
+    - assets/images/Poster1.jpg
+    - assets/images/Poster2.jpg
+    - assets/images/Poster3.jpg
+    - assets/images/Poster4.jpg
+    - assets/images/Poster5.jpg
