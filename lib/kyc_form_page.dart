@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'passbook_page.dart';
+import 'user_manager.dart';
 
 class KYCFormPage extends StatefulWidget {
   const KYCFormPage({super.key});
@@ -27,8 +28,11 @@ class _KYCFormPageState extends State<KYCFormPage> {
     "Security First",
     "Let's get started",
     "Nearly there",
-    "Home sweet home",
+    "Final Detail",
+    "Choose Scheme",
   ];
+
+  int _selectedSchemeAmount = 2000; // Default scheme
 
   void _nextStep() {
     // Validation
@@ -38,7 +42,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
     if (_currentStep == 2 && _nameController.text.isEmpty) return;
     if (_currentStep == 4 && _addressController.text.isEmpty) return;
 
-    if (_currentStep < 4) {
+    if (_currentStep < 5) {
       setState(() {
         _currentStep++;
       });
@@ -96,15 +100,18 @@ class _KYCFormPageState extends State<KYCFormPage> {
       ),
     );
 
-    // Save to SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
+    // Generate data
     String passbookID = _generatePassbookID();
-    String startDate = DateTime.now().toIso8601String();
+    DateTime startDate = DateTime.now();
     
-    await prefs.setString('user_name', _nameController.text);
-    await prefs.setString('user_phone', _phoneController.text);
-    await prefs.setString('passbook_id', passbookID);
-    await prefs.setString('start_date', startDate);
+    // Save to global state (which also saves to SharedPreferences)
+    await userNotifier.setUser(
+      name: _nameController.text,
+      phone: _phoneController.text,
+      passbookId: passbookID,
+      startDate: startDate,
+      schemeAmount: _selectedSchemeAmount,
+    );
 
     if (mounted) {
       Navigator.pop(context); // Close loading dialog
@@ -112,6 +119,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
       Navigator.pop(context, {
         'id': passbookID,
         'name': _nameController.text,
+        'schemeAmount': _selectedSchemeAmount,
       });
     }
   }
@@ -211,6 +219,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
                       hint: 'Street, City, Pincode...',
                       maxLines: 2,
                     ),
+                    _buildSchemeSelection(),
                   ],
                 ),
               ),
@@ -224,7 +233,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
                 onPressed: _nextStep,
                 backgroundColor: primaryPurple,
                 child: Icon(
-                  _currentStep == 4 ? Icons.check : Icons.arrow_forward_ios_rounded,
+                  _currentStep == 5 ? Icons.check : Icons.arrow_forward_ios_rounded,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -266,9 +275,15 @@ class _KYCFormPageState extends State<KYCFormPage> {
         );
       case 4:
         return _buildInfoCard(
-          "Final Step",
+          "Documentation",
           "We need your address for physical gold delivery and documentation purposes.",
           Icons.location_on_rounded,
+        );
+      case 5:
+        return _buildInfoCard(
+          "Pick a Scheme",
+          "Select the monthly amount you'd like to save. You can accumulate gold monthly.",
+          Icons.savings_rounded,
         );
       default:
         return const SizedBox.shrink();
@@ -346,6 +361,51 @@ class _KYCFormPageState extends State<KYCFormPage> {
           ),
           const SizedBox(height: 4),
           Container(height: 2, width: 40, color: const Color(0xFF410099)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchemeSelection() {
+    return Container(
+      alignment: Alignment.bottomCenter,
+      padding: const EdgeInsets.fromLTRB(24, 0, 100, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "SELECT MONTHLY AMOUNT",
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.grey.shade500, letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [2000, 4000, 5000].map((amount) {
+              bool isSelected = _selectedSchemeAmount == amount;
+              return Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: InkWell(
+                  onTap: () => setState(() => _selectedSchemeAmount = amount),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF410099) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF410099), width: 1.5),
+                    ),
+                    child: Text(
+                      "₹$amount",
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : const Color(0xFF410099),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );

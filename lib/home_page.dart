@@ -9,7 +9,12 @@ import 'kyc_form_page.dart';
 import 'passbook_page.dart';
 import 'reward_page.dart';
 import 'profile_page.dart';
-import 'main.dart'; // Import for global languageNotifier
+import 'support_page.dart';
+import 'language_manager.dart';
+import 'notifications_page.dart';
+import 'user_manager.dart';
+import 'price_service.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,12 +38,13 @@ class _HomePageState extends State<HomePage> {
       'get_in_touch': 'Get in touch with us.',
       'gold': 'Gold',
       'silver': 'Silver',
-      'buy_now': 'Buy now',
+      'buy_now': 'Join now',
       'explore': 'Explore',
       'visit_us': 'Visit us',
       'passbook_sub': 'Digital Passbook',
       'register_sub': 'Register & Start Savings',
       'active': 'ACTIVE',
+      'watch_learn': 'Watch & Learn',
     },
     'Tamil (தமிழ்)': {
       'home': 'முகப்பு',
@@ -52,12 +58,13 @@ class _HomePageState extends State<HomePage> {
       'get_in_touch': 'எங்களைத் தொடர்பு கொள்ளுங்கள்.',
       'gold': 'தங்கம்',
       'silver': 'வெள்ளி',
-      'buy_now': 'இப்போது வாங்கவும்',
+      'buy_now': 'இப்போது சேருங்கள்',
       'explore': 'ஆராய்ந்து பாருங்கள்',
       'visit_us': 'எங்களை அணுகவும்',
       'passbook_sub': 'டிஜிட்டல் பாஸ்புக்',
       'register_sub': 'பதிவு செய்து சேமிக்கத் தொடங்குங்கள்',
       'active': 'செயலில் உள்ளது',
+      'watch_learn': 'பார்த்து தெரிந்து கொள்ளுங்கள்',
     }
   };
 
@@ -76,10 +83,11 @@ class _HomePageState extends State<HomePage> {
   PageController _pageController = PageController(viewportFraction: 0.85, initialPage: 1000);
   int _currentPage = 0;
   int _virtualPage = 1000;
+  bool _isInitialLoaded = false;
   int _selectedNavIndex = 0;
   List<Map<String, dynamic>> _enrolledSchemes = []; // Stores {id, name, startDate}
-  String _userName = ""; 
   Timer? _autoScrollTimer;
+  late YoutubePlayerController _ytController;
   bool _timerInitialized = false;
 
   @override
@@ -89,10 +97,44 @@ class _HomePageState extends State<HomePage> {
     _pageController.addListener(() {
       if (mounted) setState(() {});
     });
-    
+
+    // Defer ALL content to ensure the transition from Lock Screen is 100% smooth
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        // Fetch live gold rates
+        priceService.fetchRates();
+        setState(() {
+          _isInitialLoaded = true;
+        });
+      }
+    });
+
+    // Restore enrolled scheme from global state if user is registered
+    _syncSchemes();
+    userNotifier.addListener(_syncSchemes);
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _startAutoScroll();
     });
+  }
+
+  void _syncSchemes() {
+    if (mounted) {
+      setState(() {
+        if (userNotifier.value.name != null && userNotifier.value.passbookId != null) {
+          _enrolledSchemes = [{
+            'id': userNotifier.value.passbookId,
+            'name': userNotifier.value.name,
+            'startDate': userNotifier.value.startDate ?? DateTime.now(),
+            'schemeAmount': userNotifier.value.schemeAmount, 
+            'paidCount': userNotifier.value.paidCount,
+            'totalWeight': userNotifier.value.totalWeight,
+          }];
+        } else {
+          _enrolledSchemes = [];
+        }
+      });
+    }
   }
 
   void _startAutoScroll() {
@@ -112,6 +154,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _autoScrollTimer?.cancel();
     _pageController.dispose();
+    userNotifier.removeListener(_syncSchemes);
     super.dispose();
   }
 
@@ -123,22 +166,16 @@ class _HomePageState extends State<HomePage> {
     
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _selectedNavIndex,
-        children: [
-          _buildHomeBody(primaryPurple, lightPurple, goldAccent),
-          const RewardPage(),
-          const SizedBox(), // Support placeholder
-          const ProfilePage(),
-        ],
-      ),
+      body: _buildCurrentPage(primaryPurple, lightPurple, goldAccent),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: primaryPurple,
         unselectedItemColor: Colors.grey.shade500,
         currentIndex: _selectedNavIndex,
-        onTap: (index) => setState(() => _selectedNavIndex = index),
+        onTap: (index) {
+          setState(() => _selectedNavIndex = index);
+        },
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: [
@@ -151,28 +188,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildCurrentPage(Color primaryPurple, Color lightPurple, Color goldAccent) {
+    switch (_selectedNavIndex) {
+      case 0: return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
+      case 1: return const RewardPage();
+      case 2: return const SupportPage();
+      case 3: return const ProfilePage();
+      default: return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
+    }
+  }
+
   Widget _buildHomeBody(Color primaryPurple, Color lightPurple, Color goldAccent) {
     return Stack(
       children: [
 
-          // 1. Extended Background Gradient (Handles Overscroll + Header)
+          // 1. Extended Background Gradient (Flows down to the Price Tag)
           Positioned(
-            top: -200, // Covers the area revealed during overscroll
+            top: 0,
             left: 0,
             right: 0,
-            height: 400, // Covers App Bar and top of carousel only
+            height: 380, // Covers App Bar and Carousel exactly down to the Rate Card
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.5, 0.7, 1.0], // Fade ends early
                   colors: [
                     primaryPurple,
-                    primaryPurple, 
-                    lightPurple.withOpacity(0.1),
-                    Colors.white,
+                    primaryPurple.withOpacity(0.8),
+                    primaryPurple.withOpacity(0.4),
+                    Colors.white.withOpacity(0.0),
                   ],
+                  stops: const [0.0, 0.4, 0.8, 1.0],
                 ),
               ),
             ),
@@ -295,88 +342,103 @@ class _HomePageState extends State<HomePage> {
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _RateHeaderDelegate(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Row(
-                          children: [
-                            // Gold Card
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFE599), // Light amber/yellow
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                      child: ValueListenableBuilder<GoldRates>(
+                        valueListenable: priceService,
+                        builder: (context, rates, _) {
+                          final String formattedDate = DateFormat('dd-MMM-yy / hh:mm a').format(rates.updatedAt);
+                          
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Row(
+                              children: [
+                                // Gold Card
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFE599), // Light amber/yellow
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        const Text('₹9445 ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                        Text(t('gold'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                        const Spacer(),
-                                        Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFFFC107), shape: BoxShape.circle)),
+                                        Row(
+                                          children: [
+                                            Text('₹${rates.gold22k.toStringAsFixed(0)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                                            Text(t('gold'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                            const Spacer(),
+                                            Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFFFC107), shape: BoxShape.circle)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text('22KT Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                            Text('₹${(rates.gold22k * 8).toStringAsFixed(0)} / 8g', style: const TextStyle(fontSize: 10, color: Color(0xFFB71C1C), fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+                                            const Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    const Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Silver Card
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0F0F0), // Light grey
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('22KT Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                        Text('₹25', style: TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                                        Row(
+                                          children: [
+                                            Text('₹${rates.silver.toStringAsFixed(2)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                                            Text(t('silver'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                            const Spacer(),
+                                            Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFBDBDBD), shape: BoxShape.circle)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        const Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text('Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                            Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    const Text('18-Aug-25 / 10:13 am', style: TextStyle(fontSize: 9, color: Colors.black54)),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            // Silver Card
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0F0F0), // Light grey
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Text('₹127 ', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                        Text(t('silver'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                        const Spacer(),
-                                        Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFBDBDBD), shape: BoxShape.circle)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text('Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                        Text('₹5', style: TextStyle(fontSize: 11, color: Color(0xFF00C853), fontWeight: FontWeight.bold)), // Green
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text('18-Aug-25 / 10:13 am', style: TextStyle(fontSize: 9, color: Colors.black54)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
 
-                  // Remaining Content
+                  // Remaining Content - Solid White Block with No Curves
                   SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    child: Container(
+                      color: Colors.white,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         // My Passbook Section (Shows multiple cards if joined multiple times)
                         if (_enrolledSchemes.isNotEmpty) ...[
                           const SizedBox(height: 12),
@@ -399,9 +461,12 @@ class _HomePageState extends State<HomePage> {
                                         context,
                                         CupertinoPageRoute(
                                           builder: (context) => PassbookPage(
-                                            userName: scheme['name'],
-                                            passbookID: scheme['id'],
-                                            startDate: scheme['startDate'],
+                                            userName: scheme['name'] ?? 'User',
+                                            passbookID: scheme['id'] ?? 'ID',
+                                            startDate: scheme['startDate'] ?? DateTime.now(),
+                                            schemeAmount: scheme['schemeAmount'] ?? 2000,
+                                            initialPaidCount: scheme['paidCount'] ?? 0,
+                                            initialTotalWeight: scheme['totalWeight'] ?? 0.0,
                                           ),
                                         ),
                                       );
@@ -412,12 +477,12 @@ class _HomePageState extends State<HomePage> {
                                       decoration: BoxDecoration(
                                           color: Colors.white,
                                           borderRadius: BorderRadius.circular(24),
-                                          border: Border.all(color: const Color(0xFF410099).withOpacity(0.2), width: 1.5),
+                                          border: Border.all(color: const Color(0xFF410099).withOpacity(0.1), width: 1),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
-                                              blurRadius: 15,
-                                              offset: const Offset(0, 8),
+                                              color: Colors.black.withOpacity(0.05),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
                                             ),
                                           ],
                                         ),
@@ -447,8 +512,8 @@ class _HomePageState extends State<HomePage> {
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
-                                                        Text(scheme['name'], style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                                        Text(scheme['id'], style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 1)),
+                                                        Text(scheme['name'] ?? 'Ambal Gold', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                                        Text(scheme['id'] ?? 'AG-0000', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 1)),
                                                       ],
                                                     ),
                                                     const SizedBox(height: 16),
@@ -464,14 +529,14 @@ class _HomePageState extends State<HomePage> {
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
-                                                        const Column(
+                                                        Column(
                                                           crossAxisAlignment: CrossAxisAlignment.start,
                                                           children: [
-                                                            Text('₹2000', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                                                            Text('Per month', style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                            Text('₹${scheme['schemeAmount'] ?? 2000}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                                            const Text('Per month', style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                                                           ],
                                                         ),
-                                                        const Text('2/11', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                                        Text('${scheme['paidCount'] ?? 0}/12', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                                                       ],
                                                     ),
                                                   ],
@@ -507,19 +572,19 @@ class _HomePageState extends State<HomePage> {
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
-                                                        _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'])),
-                                                        _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime(scheme['startDate'].year, scheme['startDate'].month + 1, scheme['startDate'].day))),
-                                                        _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime(scheme['startDate'].year, scheme['startDate'].month + 11, scheme['startDate'].day))),
+                                                        _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'] ?? DateTime.now())),
+                                                        _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 1, (scheme['startDate'] ?? DateTime.now()).day))),
+                                                        _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 12, (scheme['startDate'] ?? DateTime.now()).day))),
                                                       ],
                                                     ),
                                                     const SizedBox(height: 12),
                                                     // Progress Dots (Shrunken)
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: List.generate(11, (i) => Container(
+                                                      children: List.generate(12, (i) => Container(
                                                         margin: const EdgeInsets.symmetric(horizontal: 3),
                                                         width: 7, height: 7,
-                                                        decoration: BoxDecoration(color: i < 2 ? Colors.green : Colors.grey[300], shape: BoxShape.circle),
+                                                        decoration: BoxDecoration(color: i < (scheme['paidCount'] ?? 0) ? Colors.green : Colors.grey[300], shape: BoxShape.circle),
                                                       )),
                                                     ),
                                                   ],
@@ -532,13 +597,13 @@ class _HomePageState extends State<HomePage> {
                                                   child: Container(
                                                     width: 70, height: 70,
                                                     decoration: BoxDecoration(color: Colors.yellow[600], shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                                                    child: const Column(
+                                                    child: Column(
                                                       mainAxisAlignment: MainAxisAlignment.center,
                                                       children: [
-                                                        Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                        Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                        SizedBox(height: 2),
-                                                        Text('2.061 g', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                                                        const Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                                                        const Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                                                        const SizedBox(height: 2),
+                                                        Text('${(scheme['totalWeight'] ?? 0.0).toStringAsFixed(3)} g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
                                                       ],
                                                     ),
                                                   ),
@@ -551,12 +616,12 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   );
                                 },
+                              ),
                             ),
-                          ),
                           const SizedBox(height: 12),
                         ],
                         
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
                         // Welcome Banner
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -599,19 +664,28 @@ class _HomePageState extends State<HomePage> {
                         _buildSectionHeader(t('savings_title')),
                         const SizedBox(height: 12),
                         
-                        // Single Saving Scheme Card
+                        // Single Saving Scheme Card (Stitched Poster + Buttons)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Container(
-                            height: 180,
+                            height: 230,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3C3C3C),
-                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
                             clipBehavior: Clip.antiAlias,
                             child: Column(
                               children: [
+                                // Top Poster Image
                                 Expanded(
                                   child: SizedBox.expand(
                                     child: Image.asset(
@@ -626,44 +700,63 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () async {
-                                          final result = await Navigator.push(
-                                            context,
-                                            CupertinoPageRoute(builder: (context) => const KYCFormPage()),
-                                          );
-                                          if (result != null && result is Map) {
-                                            setState(() {
-                                              _userName = result['name'] ?? ""; // Set the user name for the header greeting
-                                              _enrolledSchemes.add({
-                                                'id': result['id'],
-                                                'name': _userName,
-                                                'startDate': DateTime.now(), // Joined today
+                                // Bottom Action Bar (Stitched)
+                                Container(
+                                  height: 52,
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // Join Now Button
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            final result = await Navigator.push(
+                                              context,
+                                              CupertinoPageRoute(builder: (context) => const KYCFormPage()),
+                                            );
+                                            if (result != null && result is Map) {
+                                              setState(() {
+                                                _enrolledSchemes.add({
+                                                  'id': result['id'],
+                                                  'name': userNotifier.value.name,
+                                                  'startDate': DateTime.now(),
+                                                  'schemeAmount': result['schemeAmount'],
+                                                  'paidCount': 0,
+                                                  'totalWeight': 0.0,
+                                                });
                                               });
-                                            });
-                                          }
-                                        },
-                                        child: Container(
-                                          color: const Color(0xFF673AB7),
-                                          padding: const EdgeInsets.symmetric(vertical: 14),
-                                          alignment: Alignment.center,
-                                          child: const Text('JOIN NOW', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                                            }
+                                          },
+                                          child: Center(
+                                            child: Text(
+                                              t('buy_now').toUpperCase(),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    Container(width: 1, color: Colors.white30, height: 42), // Divider
-                                    Expanded(
-                                      child: Container(
-                                        color: const Color(0xFF512DA8),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        alignment: Alignment.center,
-                                        child: const Text('KNOW MORE', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                                      // Divider
+                                      Container(width: 0.5, height: 25, color: Colors.white30),
+                                      // Know More Button
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () {},
+                                          child: Center(
+                                            child: Text(
+                                              t('explore').toUpperCase(),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -680,6 +773,9 @@ class _HomePageState extends State<HomePage> {
                         
                         const SizedBox(height: 8),
                         
+
+                        const SizedBox(height: 32),
+
                         // Our Showroom Section with Map
                         _buildSectionHeader(t('showroom_title')),
                         const SizedBox(height: 12),
@@ -775,14 +871,15 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         
-                        const SizedBox(height: 30),
-                                              ],
+                        const SizedBox(height: 50),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
 
           // 3. Locked App Bar Area
           Positioned(
@@ -790,7 +887,9 @@ class _HomePageState extends State<HomePage> {
             left: 0,
             right: 0,
             child: Container(
-              color: primaryPurple, // Reverted to solid color without shadow for cleaner transition
+              decoration: const BoxDecoration(
+                color: Colors.transparent,
+              ),
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -830,41 +929,55 @@ class _HomePageState extends State<HomePage> {
                       // Greeting and Notification
                       Row(
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('hello👋', style: TextStyle(color: Colors.white, fontSize: 11)),
-                              if (_userName.isNotEmpty)
-                                Text(
-                                  _userName.contains('!') ? _userName : '$_userName!', 
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                            ],
+                          ValueListenableBuilder<UserState>(
+                            valueListenable: userNotifier,
+                            builder: (context, user, child) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text('hello👋', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                  if (user.name != null && user.name!.isNotEmpty)
+                                    Text(
+                                      user.name!.contains('!') ? user.name! : '${user.name!}!', 
+                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(width: 12),
-                          Stack(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.notifications_none, color: Colors.white, size: 22),
-                              ),
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF00E676),
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                CupertinoPageRoute(builder: (context) => const NotificationsPage()),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
                                     shape: BoxShape.circle,
                                   ),
+                                  child: const Icon(Icons.notifications_none, color: Colors.white, size: 22),
                                 ),
-                              )
-                            ],
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF00E676),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -889,6 +1002,44 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
+
+  Widget _buildSkeletonShell(Color primaryPurple) {
+    return Column(
+      children: [
+        // Fake AppBar to prevent "jump" when real content loads
+        Container(
+          height: 100,
+          color: primaryPurple,
+          padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle)),
+              Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10))),
+              Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle)),
+            ],
+          ),
+        ),
+        const Spacer(),
+        // Simple branding text that matches the premium feel
+        const Text(
+          'Ambal Gold',
+          style: TextStyle(
+            color: Color(0xFF410099),
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2.0,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Dindigul Market Live',
+          style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        const Spacer(flex: 2),
+      ],
+    );
+  }
 }
 
 class _RateHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -899,7 +1050,7 @@ class _RateHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.white, // Solid background when pinned
+      color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: child,
     );

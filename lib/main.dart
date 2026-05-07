@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'lock_screen_page.dart';
-
-// Global notifier to trigger app-wide rebuilds on language change
-final ValueNotifier<String> languageNotifier = ValueNotifier('English');
+import 'splash_screen.dart';
+import 'language_manager.dart';
+import 'user_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   languageNotifier.value = prefs.getString('user_lang') ?? 'English';
+  await userNotifier.loadUser();
   runApp(const MainApp());
 }
 
@@ -28,7 +29,7 @@ class MainApp extends StatelessWidget {
             useMaterial3: true,
             colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE09200)),
           ),
-          home: const LockScreenPage(),
+          home: const SplashScreen(),
         );
       },
     );

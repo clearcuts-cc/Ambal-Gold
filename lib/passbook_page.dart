@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+import 'price_service.dart';
+import 'user_manager.dart';
+import 'redeem_page.dart';
 
 class PassbookPage extends StatefulWidget {
   final String userName;
   final String passbookID;
   final DateTime startDate;
 
+  final int schemeAmount;
+  final int initialPaidCount;
+  final double initialTotalWeight;
+
   const PassbookPage({
     super.key,
     required this.userName,
     required this.passbookID,
     required this.startDate,
+    this.schemeAmount = 2000,
+    this.initialPaidCount = 0,
+    this.initialTotalWeight = 0.0,
   });
 
   @override
@@ -24,10 +35,11 @@ class _PassbookPageState extends State<PassbookPage> {
   
   int selectedMonthIndex = 0;
   String selectedTab = "RECIPTS";
-  int paidCount = 2; // Track how many installments are paid
+  late int paidCount;
+  late double totalWeight;
   bool isProcessingPayment = false;
 
-  // Mock data for the 11-month logic
+  // Mock data for the 12-month logic
   late DateTime joiningDate;
   late DateTime maturityDate;
   late List<String> months;
@@ -35,9 +47,11 @@ class _PassbookPageState extends State<PassbookPage> {
   @override
   void initState() {
     super.initState();
-    // Generate 11 months for the scheme and add 'all' at the start
+    paidCount = widget.initialPaidCount;
+    totalWeight = widget.initialTotalWeight;
+    // Generate 12 months for the scheme and add 'all' at the start
     months = ['all'];
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 12; i++) {
       DateTime monthDate = DateTime(widget.startDate.year, widget.startDate.month + i);
       months.add(DateFormat('MMM').format(monthDate).toLowerCase());
     }
@@ -105,93 +119,96 @@ class _PassbookPageState extends State<PassbookPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Background Gradient
-          Container(
-            height: MediaQuery.of(context).size.height * 0.45,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  primaryPurple,
-                  primaryPurple.withOpacity(0.8),
-                  Colors.white,
+    return WillPopScope(
+      onWillPop: () async => true,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            // Background Gradient
+            Container(
+              height: MediaQuery.of(context).size.height * 0.45,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    primaryPurple,
+                    primaryPurple.withOpacity(0.8),
+                    Colors.white,
+                  ],
+                ),
+              ),
+            ),
+            
+            SafeArea(
+              child: Column(
+                children: [
+                  // 1. Custom Header (Fixed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'scheme passbook',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.download_for_offline, color: Colors.white),
+                          onPressed: () => _downloadPassbook(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person_outline, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // 2. Fixed Content (Summary, Month Selector, Tabs)
+                  _buildSummaryCard(),
+                  const SizedBox(height: 16),
+                  _buildMonthSelector(),
+                  const SizedBox(height: 16),
+                  _buildReceiptButton(),
+                  const SizedBox(height: 16),
+
+                  // 3. Scrollable Transaction History
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 120), // Extra space for footer
+                      child: _buildTransactionHistory(),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          
-          SafeArea(
-            child: Column(
-              children: [
-                // 1. Custom Header (Fixed)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'scheme passbook',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.download_for_offline, color: Colors.white),
-                        onPressed: () => _downloadPassbook(context),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.person_outline, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // 2. Fixed Content (Summary, Month Selector, Tabs)
-                _buildSummaryCard(),
-                const SizedBox(height: 16),
-                _buildMonthSelector(),
-                const SizedBox(height: 16),
-                _buildReceiptButton(),
-                const SizedBox(height: 16),
-
-                // 3. Scrollable Transaction History
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 120), // Extra space for footer
-                    child: _buildTransactionHistory(),
-                  ),
-                ),
-              ],
+            
+            // Bottom Action Button
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildBottomActions(),
             ),
-          ),
-          
-          // Bottom Action Button
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomActions(),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -200,10 +217,11 @@ class _PassbookPageState extends State<PassbookPage> {
     bool isAll = selectedMonthIndex == 0;
     
     // Mock dynamic values
-    String amount = isAll ? "₹21,340" : "₹1,940";
-    String weight = isAll ? "2.061 g" : "0.187 g";
-    String benefit = isAll ? "0.046 gram" : "0.004 gram";
-    String rewards = isAll ? "0.022 gram" : "0.002 gram";
+    // Real calculations based on paidCount and totalWeight
+    String amount = isAll ? "₹${(paidCount * widget.schemeAmount).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}" : "₹0";
+    String weight = isAll ? "${totalWeight.toStringAsFixed(3)} g" : "0.000 g";
+    String benefit = isAll ? "${(totalWeight * 0.02).toStringAsFixed(3)} gram" : "0.000 gram"; // 2% benefit mock
+    String rewards = isAll ? "${(totalWeight * 0.01).toStringAsFixed(3)} gram" : "0.000 gram"; // 1% rewards mock
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -270,22 +288,21 @@ class _PassbookPageState extends State<PassbookPage> {
                         ],
                       ),
                       
-                      // Values Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              const Text('₹2000', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                              const SizedBox(width: 4),
-                              Text('Per month', style: TextStyle(color: Colors.greenAccent[400], fontSize: 10, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Text('$paidCount/11', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                        ],
-                      ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text('₹${widget.schemeAmount}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                const SizedBox(width: 4),
+                                Text('Per month', style: TextStyle(color: Colors.greenAccent[400], fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            Text('$paidCount/12', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
                       
                       const SizedBox(height: 12),
                       
@@ -307,7 +324,7 @@ class _PassbookPageState extends State<PassbookPage> {
                           ),
                           InkWell(
                             onTap: () {
-                              if (paidCount < 11) {
+                              if (paidCount < 12) {
                                 setState(() => selectedMonthIndex = paidCount + 1);
                               }
                             },
@@ -334,7 +351,7 @@ class _PassbookPageState extends State<PassbookPage> {
                           Container(width: 1, height: 40, color: Colors.grey[300]),
                           _buildInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime(widget.startDate.year, widget.startDate.month + paidCount, widget.startDate.day))),
                           Container(width: 1, height: 40, color: Colors.grey[300]),
-                          _buildInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime(widget.startDate.year, widget.startDate.month + 11, widget.startDate.day))),
+                          _buildInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime(widget.startDate.year, widget.startDate.month + 12, widget.startDate.day))),
                         ],
                       ),
                       
@@ -343,7 +360,7 @@ class _PassbookPageState extends State<PassbookPage> {
                       // Simplified Small Progress Dots (Non-interactive)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(11, (index) {
+                        children: List.generate(12, (index) {
                           bool isPaid = index < paidCount; 
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -374,13 +391,13 @@ class _PassbookPageState extends State<PassbookPage> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                          Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 2),
-                          Text('2.061 g', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                          const Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                          const Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text('${totalWeight.toStringAsFixed(3)} g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
                         ],
                       ),
                     ),
@@ -544,21 +561,18 @@ class _PassbookPageState extends State<PassbookPage> {
           
           // List Items (Logic matching the pic)
           if (isAll) ...[
-            ...List.generate(11, (i) {
+            ...List.generate(12, (i) {
               DateTime dueDate = DateTime(widget.startDate.year, widget.startDate.month + i, widget.startDate.day);
               String dateStr = DateFormat('dd.MM.yy').format(dueDate);
               
               if (i < paidCount) {
-                // If i == 1 (Feb), let's simulate 'Paid late' like the pic
-                String status = (i == 1) ? "Paid late" : "Completed";
-                Color statusColor = (i == 1) ? Colors.red.shade400 : Colors.green.shade600;
-                // Add a small delay for the late date
-                if (i == 1) dateStr = DateFormat('dd.MM.yy').format(dueDate.add(const Duration(days: 3)));
+                String status = "Completed";
+                Color statusColor = Colors.green.shade600;
                 
                 return _buildTransactionItem(
                   status: status,
                   date: dateStr,
-                  amount: "₹2000",
+                  amount: "₹${widget.schemeAmount}",
                   statusColor: statusColor,
                   icon: Icons.check_circle_outline,
                   monthIndex: i,
@@ -566,12 +580,12 @@ class _PassbookPageState extends State<PassbookPage> {
               } else if (i == paidCount) {
                 // Next due month
                 return _buildTransactionItem(
-                  status: "Overdue",
+                  status: "",
                   date: dateStr,
-                  amount: "₹2000",
-                  statusColor: Colors.red,
+                  amount: "₹${widget.schemeAmount}",
+                  statusColor: Colors.grey,
                   icon: Icons.radio_button_unchecked,
-                  isOverdue: true,
+                  isOverdue: false,
                   monthIndex: i,
                 );
               } else {
@@ -579,7 +593,7 @@ class _PassbookPageState extends State<PassbookPage> {
                 return _buildTransactionItem(
                   status: "",
                   date: dateStr,
-                  amount: "₹2000",
+                  amount: "₹${widget.schemeAmount}",
                   statusColor: Colors.grey,
                   icon: Icons.radio_button_unchecked,
                   monthIndex: i,
@@ -600,14 +614,13 @@ class _PassbookPageState extends State<PassbookPage> {
     String dateStr = DateFormat('dd.MM.yy').format(dueDate);
     
     if (i < paidCount) {
-      String status = (i == 1) ? "Paid late" : "Completed";
-      Color statusColor = (i == 1) ? Colors.red.shade400 : Colors.green.shade600;
-      if (i == 1) dateStr = DateFormat('dd.MM.yy').format(dueDate.add(const Duration(days: 3)));
-      return _buildTransactionItem(status: status, date: dateStr, amount: "₹2000", statusColor: statusColor, icon: Icons.check_circle_outline, monthIndex: i);
+      String status = "Completed";
+      Color statusColor = Colors.green.shade600;
+      return _buildTransactionItem(status: status, date: dateStr, amount: "₹${widget.schemeAmount}", icon: Icons.check_circle_outline, monthIndex: i, statusColor: statusColor);
     } else if (i == paidCount) {
-      return _buildTransactionItem(status: "Overdue", date: dateStr, amount: "₹2000", statusColor: Colors.red, icon: Icons.radio_button_unchecked, isOverdue: true, monthIndex: i);
+      return _buildTransactionItem(status: "", date: dateStr, amount: "₹${widget.schemeAmount}", statusColor: Colors.grey, icon: Icons.radio_button_unchecked, isOverdue: false, monthIndex: i);
     } else {
-      return _buildTransactionItem(status: "", date: dateStr, amount: "₹2000", statusColor: Colors.grey, icon: Icons.radio_button_unchecked, monthIndex: i);
+      return _buildTransactionItem(status: "", date: dateStr, amount: "₹${widget.schemeAmount}", statusColor: Colors.grey, icon: Icons.radio_button_unchecked, monthIndex: i);
     }
   }
 
@@ -679,11 +692,11 @@ class _PassbookPageState extends State<PassbookPage> {
     bool isAlreadyPaid = targetIndex <= paidCount;
     bool isNextAvailable = targetIndex == paidCount + 1;
     bool isFuture = targetIndex > paidCount + 1;
-    bool isSchemeCompleted = paidCount >= 11;
+    bool isSchemeCompleted = paidCount >= 12;
 
     String buttonText = "pay now";
     if (isSchemeCompleted) {
-      buttonText = "scheme completed";
+      buttonText = "REDEEM NOW";
     } else if (isAlreadyPaid) {
       buttonText = "already paid";
     } else if (isFuture) {
@@ -709,11 +722,25 @@ class _PassbookPageState extends State<PassbookPage> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: (isProcessingPayment || isAlreadyPaid || isFuture || isSchemeCompleted) 
+                onPressed: (isProcessingPayment || (!isSchemeCompleted && (isAlreadyPaid || isFuture))) 
                   ? null 
-                  : () => _processPayment(targetIndex),
+                  : () {
+                      if (isSchemeCompleted) {
+                        Navigator.push(
+                          context, 
+                          CupertinoPageRoute(
+                            builder: (context) => RedeemPage(
+                              totalWeight: totalWeight,
+                              passbookID: widget.passbookID,
+                            ),
+                          ),
+                        );
+                      } else {
+                        _processPayment(targetIndex);
+                      }
+                    },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
+                  backgroundColor: isSchemeCompleted ? goldAccent : primaryPurple,
                   disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
@@ -727,9 +754,9 @@ class _PassbookPageState extends State<PassbookPage> {
                   : Text(
                       buttonText, 
                       style: TextStyle(
-                        color: (isAlreadyPaid || isFuture || isSchemeCompleted) ? Colors.grey : Colors.white, 
+                        color: (!isSchemeCompleted && (isAlreadyPaid || isFuture)) ? Colors.grey : (isSchemeCompleted ? Colors.black : Colors.white), 
                         fontSize: 16, 
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 1,
                       )
                     ),
@@ -744,23 +771,27 @@ class _PassbookPageState extends State<PassbookPage> {
   void _processPayment(int targetIndex) {
     setState(() => isProcessingPayment = true);
     
-    // Simulate payment process
+    // Simulate payment process with real gold rate calculation
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
+      
+      final currentGoldRate = priceService.value.gold22k;
+      final double weightAdded = widget.schemeAmount / currentGoldRate; // Use selected scheme amount
       
       setState(() {
         isProcessingPayment = false;
         paidCount++;
-        // If we paid the selected month, we could either stay or move to next
-        // But the user said "after do another select", so let's keep current selection 
-        // which now will show as "Already Paid".
+        totalWeight += weightAdded;
       });
 
-      _showSuccessDialog(targetIndex);
+      // Update global user state immediately
+      userNotifier.updateProgress(paidCount, totalWeight);
+
+      _showSuccessDialog(targetIndex, weightAdded);
     });
   }
 
-  void _showSuccessDialog(int targetIndex) {
+  void _showSuccessDialog(int targetIndex, double weightAdded) {
     String monthName = months[targetIndex].toUpperCase();
     showDialog(
       context: context,
@@ -777,7 +808,7 @@ class _PassbookPageState extends State<PassbookPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Transaction for $monthName installment completed successfully.',
+              'Transaction for $monthName installment completed successfully.\n\nGold Rate: ₹${priceService.value.gold22k.toStringAsFixed(0)}\nGold Added: ${weightAdded.toStringAsFixed(3)} g',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.grey),
             ),

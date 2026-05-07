@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'main.dart'; // Import to access global languageNotifier
+import 'language_manager.dart';
+import 'user_manager.dart';
 import 'kyc_form_page.dart';
 import 'passbook_page.dart';
 import 'lock_screen_page.dart';
+import 'support_page.dart';
+import 'pin_change_page.dart';
+import 'reward_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,12 +19,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  String? _userName;
-  String? _userPhone;
-  String? _passbookID;
-  DateTime? _startDate;
-  bool _isLoading = true;
-
   // Translation Map
   static const Map<String, Map<String, String>> _localized = {
     'English': {
@@ -50,6 +48,8 @@ class _ProfilePageState extends State<ProfilePage> {
       'verified': 'Verified Member',
       'back': 'Back to Profile',
       'reg_prompt': 'Please register to view history',
+      'reset_app': 'Reset App Data',
+      'reset_sub': 'Wipe all data and start fresh',
     },
     'Tamil (தமிழ்)': {
       'hi': 'வணக்கம்,',
@@ -78,34 +78,10 @@ class _ProfilePageState extends State<ProfilePage> {
       'verified': 'சரிபார்க்கப்பட்ட உறுப்பினர்',
       'back': 'சுயவிவரத்திற்குத் திரும்பு',
       'reg_prompt': 'வரலாற்றைப் பார்க்க பதிவு செய்யவும்',
+      'reset_app': 'பயன்பாட்டுத் தரவை மீட்டமைக்கவும்',
+      'reset_sub': 'அனைத்து தரவையும் அழித்து புதிதாக தொடங்கவும்',
     }
   };
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      String? dateStr = prefs.getString('start_date');
-      if (mounted) {
-        setState(() {
-          _userName = prefs.getString('user_name');
-          _userPhone = prefs.getString('user_phone');
-          _passbookID = prefs.getString('passbook_id');
-          if (dateStr != null) {
-            _startDate = DateTime.tryParse(dateStr);
-          }
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
   String t(String key) {
     final langMap = _localized[languageNotifier.value]; // Use global value
@@ -146,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showAccountDetails() {
+  void _showAccountDetails(UserState user) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -161,13 +137,13 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 25),
             Text(t('acc_details_title'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 30),
-            _detailRow(Icons.person_outline, t('full_name'), _userName ?? t('guest')),
+            _detailRow(Icons.person_outline, t('full_name'), user.name ?? t('guest')),
             const Divider(),
-            _detailRow(Icons.phone_android_outlined, t('phone'), _userPhone ?? 'Not Registered'),
+            _detailRow(Icons.phone_android_outlined, t('phone'), user.phone ?? 'Not Registered'),
             const Divider(),
-            _detailRow(Icons.fingerprint_rounded, 'Passbook ID', _passbookID ?? 'Not Generated'),
+            _detailRow(Icons.fingerprint_rounded, 'Passbook ID', user.passbookId ?? 'Not Generated'),
             const Divider(),
-            _detailRow(Icons.verified_outlined, t('status'), _userName != null ? t('verified') : t('guest')),
+            _detailRow(Icons.verified_outlined, t('status'), user.name != null ? t('verified') : t('guest')),
             const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,
@@ -211,13 +187,14 @@ class _ProfilePageState extends State<ProfilePage> {
     const Color bgLavender = Color(0xFFF5F0FF);
     const Color primaryPurple = Color(0xFF410099);
 
-    bool isRegistered = _userName != null && _userName!.isNotEmpty;
-
     return Scaffold(
       backgroundColor: bgLavender,
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: primaryPurple))
-        : SafeArea(
+      body: ValueListenableBuilder<UserState>(
+        valueListenable: userNotifier,
+        builder: (context, user, child) {
+          bool isRegistered = user.name != null && user.name!.isNotEmpty;
+          
+          return SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -240,7 +217,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    isRegistered ? '${t('hi')} ${_userName!}' : '${t('hi')} ${t('guest')}',
+                    isRegistered ? '${t('hi')} ${user.name!}' : '${t('hi')} ${t('guest')}',
                     style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 40),
@@ -249,8 +226,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildSectionTitle(t('acc_settings')),
                   const SizedBox(height: 12),
                   _buildMenuCard([
-                    _buildMenuItem(Icons.person_outline, t('acc_details'), t('acc_sub'), () => _showAccountDetails()),
-                    _buildMenuItem(Icons.password_outlined, t('change_pin'), t('pin_sub'), () {}),
+                    _buildMenuItem(Icons.person_outline, t('acc_details'), t('acc_sub'), () => _showAccountDetails(user)),
+                    _buildMenuItem(Icons.password_outlined, t('change_pin'), t('pin_sub'), () {
+                      Navigator.push(context, CupertinoPageRoute(builder: (context) => const PinChangePage()));
+                    }),
                   ]),
 
                   const SizedBox(height: 32),
@@ -259,19 +238,28 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildSectionTitle(t('support')),
                   const SizedBox(height: 12),
                   _buildMenuCard([
-                    _buildMenuItem(Icons.favorite_outline, t('refer'), t('refer_sub'), () {}),
+                    _buildMenuItem(Icons.favorite_outline, t('refer'), t('refer_sub'), () {
+                      Navigator.push(context, CupertinoPageRoute(builder: (context) => const RewardPage()));
+                    }),
                     _buildMenuItem(Icons.history, t('history'), t('history_sub'), () {
                       if (isRegistered) {
                         Navigator.push(context, CupertinoPageRoute(builder: (context) => PassbookPage(
-                          userName: _userName!,
-                          passbookID: _passbookID ?? 'AJDGL0000000',
-                          startDate: _startDate ?? DateTime.now(),
+                          userName: user.name!,
+                          passbookID: user.passbookId ?? 'AJDGL0000000',
+                          startDate: user.startDate ?? DateTime.now(),
+                          initialPaidCount: user.paidCount,
+                          initialTotalWeight: user.totalWeight,
                         )));
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('reg_prompt'))));
                       }
                     }),
-                    _buildMenuItem(Icons.headset_mic_outlined, t('help'), t('help_sub'), () {}),
+                    _buildMenuItem(Icons.headset_mic_outlined, t('help'), t('help_sub'), () {
+                      Navigator.push(context, CupertinoPageRoute(builder: (context) => const SupportPage()));
+                    }),
+                    _buildMenuItem(Icons.delete_forever_outlined, t('reset_app'), t('reset_sub'), () {
+                      _showResetConfirmation();
+                    }),
                   ]),
 
                   const SizedBox(height: 40),
@@ -282,8 +270,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
                         onPressed: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.clear();
+                          await userNotifier.logout();
                           if (mounted) {
                             Navigator.pushAndRemoveUntil(
                               context, 
@@ -302,7 +289,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: ElevatedButton(
                         onPressed: () async {
                           await Navigator.push(context, CupertinoPageRoute(builder: (context) => const KYCFormPage()));
-                          _loadUserData();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryPurple,
@@ -322,16 +308,35 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildFooterLink(t('about')),
+                        _buildFooterLink(t('about'), () => _showInfoDialog(t('about'), 'Ambal Gold is a premium digital jewelry savings platform established in Dindigul. We empower users to save in gold conveniently and securely. With our 12-month flexible scheme, you can build your jewelry collection with ease and trust.')),
                         Text('v1.121.1 (v10)', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                        _buildFooterLink(t('tnc')),
+                        _buildFooterLink(t('tnc'), () => _showInfoDialog(t('tnc'), '1. Gold rates are updated daily.\n2. Schemes are for 12 months.\n3. Late payments may affect the weight calculation based on the payment date.\n4. Redemption can be done at our Dindigul showroom upon maturity.')),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showInfoDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(content, style: const TextStyle(height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Color(0xFF410099), fontWeight: FontWeight.bold)),
           ),
+        ],
+      ),
     );
   }
 
@@ -376,10 +381,43 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildFooterLink(String text) {
-    return Container(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade400))),
-      child: Text(text, style: const TextStyle(color: Color(0xFF410099), fontWeight: FontWeight.bold, fontSize: 14)),
+  Widget _buildFooterLink(String text, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade400))),
+        child: Text(text, style: const TextStyle(color: Color(0xFF410099), fontWeight: FontWeight.bold, fontSize: 14)),
+      ),
+    );
+  }
+
+  void _showResetConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Reset App Data?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: const Text('This will permanently delete your account details, passbook, and PIN. You will need to set up the app again.', style: TextStyle(height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await userNotifier.clearAllData();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  CupertinoPageRoute(builder: (context) => const LockScreenPage()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text('Yes, Reset', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 }
