@@ -14,6 +14,8 @@ import 'language_manager.dart';
 import 'notifications_page.dart';
 import 'user_manager.dart';
 import 'price_service.dart';
+import 'scheme_details_page.dart';
+import 'digigold_passbook_page.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class HomePage extends StatefulWidget {
@@ -65,7 +67,7 @@ class _HomePageState extends State<HomePage> {
       'register_sub': 'பதிவு செய்து சேமிக்கத் தொடங்குங்கள்',
       'active': 'செயலில் உள்ளது',
       'watch_learn': 'பார்த்து தெரிந்து கொள்ளுங்கள்',
-    }
+    },
   };
 
   String t(String key) {
@@ -76,16 +78,23 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
-  PageController _pageController = PageController(viewportFraction: 0.85, initialPage: 1000);
+  PageController _pageController = PageController(
+    viewportFraction: 0.85,
+    initialPage: 1000,
+  );
   int _currentPage = 0;
   int _virtualPage = 1000;
-  bool _isInitialLoaded = false;
+
   int _selectedNavIndex = 0;
-  List<Map<String, dynamic>> _enrolledSchemes = []; // Stores {id, name, startDate}
+  List<Map<String, dynamic>> _enrolledSchemes =
+      []; // Stores {id, name, startDate}
   Timer? _autoScrollTimer;
   late YoutubePlayerController _ytController;
   bool _timerInitialized = false;
@@ -103,9 +112,7 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         // Fetch live gold rates
         priceService.fetchRates();
-        setState(() {
-          _isInitialLoaded = true;
-        });
+        setState(() {});
       }
     });
 
@@ -121,15 +128,17 @@ class _HomePageState extends State<HomePage> {
   void _syncSchemes() {
     if (mounted) {
       setState(() {
-        if (userNotifier.value.name != null && userNotifier.value.passbookId != null) {
-          _enrolledSchemes = [{
-            'id': userNotifier.value.passbookId,
+        if (userNotifier.value.name != null &&
+            userNotifier.value.schemes.isNotEmpty) {
+          _enrolledSchemes = userNotifier.value.schemes.map((s) => {
+            'id': s.id,
             'name': userNotifier.value.name,
-            'startDate': userNotifier.value.startDate ?? DateTime.now(),
-            'schemeAmount': userNotifier.value.schemeAmount, 
-            'paidCount': userNotifier.value.paidCount,
-            'totalWeight': userNotifier.value.totalWeight,
-          }];
+            'startDate': s.startDate,
+            'schemeAmount': s.schemeAmount,
+            'paidCount': s.paidCount,
+            'totalWeight': s.totalWeight,
+            'schemeType': s.schemeType,
+          }).toList();
         } else {
           _enrolledSchemes = [];
         }
@@ -161,9 +170,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     const Color primaryPurple = Color(0xFF410099); // Exact deep purple from top
-    const Color lightPurple = Color(0xFF6A1B9A); 
+    const Color lightPurple = Color(0xFF6A1B9A);
     const Color goldAccent = Color(0xFFFFC107);
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: _buildCurrentPage(primaryPurple, lightPurple, goldAccent),
@@ -176,348 +185,356 @@ class _HomePageState extends State<HomePage> {
         onTap: (index) {
           setState(() => _selectedNavIndex = index);
         },
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.home), label: t('home')),
-          BottomNavigationBarItem(icon: const Icon(Icons.emoji_events_outlined), label: t('reward')),
-          BottomNavigationBarItem(icon: const Icon(Icons.support_agent_outlined), label: t('support')),
-          BottomNavigationBarItem(icon: const Icon(Icons.person_outline), label: t('profile')),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            label: t('home'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.emoji_events_outlined),
+            label: t('reward'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.headset_mic_outlined),
+            label: t('support'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person_outline),
+            label: t('profile'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCurrentPage(Color primaryPurple, Color lightPurple, Color goldAccent) {
+  Widget _buildCurrentPage(
+    Color primaryPurple,
+    Color lightPurple,
+    Color goldAccent,
+  ) {
     switch (_selectedNavIndex) {
-      case 0: return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
-      case 1: return const RewardPage();
-      case 2: return const SupportPage();
-      case 3: return const ProfilePage();
-      default: return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
+      case 0:
+        return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
+      case 1:
+        return const RewardPage();
+      case 2:
+        return const SupportPage();
+      case 3:
+        return const ProfilePage();
+      default:
+        return _buildHomeBody(primaryPurple, lightPurple, goldAccent);
     }
   }
 
-  Widget _buildHomeBody(Color primaryPurple, Color lightPurple, Color goldAccent) {
+  Widget _buildHomeBody(
+    Color primaryPurple,
+    Color lightPurple,
+    Color goldAccent,
+  ) {
     return Stack(
       children: [
-
-          // 1. Extended Background Gradient (Flows down to the Price Tag)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 380, // Covers App Bar and Carousel exactly down to the Rate Card
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    primaryPurple,
-                    primaryPurple.withOpacity(0.8),
-                    primaryPurple.withOpacity(0.4),
-                    Colors.white.withOpacity(0.0),
-                  ],
-                  stops: const [0.0, 0.4, 0.8, 1.0],
-                ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 380,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  primaryPurple,
+                  primaryPurple.withOpacity(0.8),
+                  primaryPurple.withOpacity(0.4),
+                  Colors.white.withOpacity(0.0),
+                ],
+                stops: const [0.0, 0.4, 0.8, 1.0],
               ),
             ),
           ),
-          // 1. Scrolling Content
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 60), // Tightened gap
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                slivers: [
-                  // Image Carousel
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 190,
-                          child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.mouse,
-                              },
-                            ),
-                            child: PageView.builder(
-                              key: const ValueKey('carousel_main'),
-                              controller: _pageController,
-                              onPageChanged: (index) {
-                                setState(() {
-                                  _virtualPage = index;
-                                  _currentPage = index % 5;
-                                });
-                              },
-                              itemCount: 10000,
-                              itemBuilder: (context, index) {
-                                final int itemIndex = index % 5;
-                                return AnimatedBuilder(
-                                  animation: _pageController,
-                                  builder: (context, child) {
-                                    double scale = 0.82;
-                                    double opacity = 0.5;
-                                    double translation = 0.0;
-                                    
-                                    try {
-                                      if (_pageController.hasClients) {
-                                        double page = _pageController.page ?? 1000.0;
-                                        double diff = (page - index).abs();
-                                        scale = (1 - (diff * 0.18)).clamp(0.82, 1.0);
-                                        opacity = (1 - (diff * 0.5)).clamp(0.5, 1.0);
-                                        // Pull side images towards center to reduce gap
-                                        translation = diff * 20.0;
-                                      } else if (index == 1000) {
-                                        scale = 1.0;
-                                        opacity = 1.0;
-                                      }
-                                    } catch (_) {
-                                      scale = (index == 1000) ? 1.0 : 0.82;
-                                      opacity = (index == 1000) ? 1.0 : 0.5;
-                                    }
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 190,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.mouse,
+                            },
+                          ),
+                          child: PageView.builder(
+                            key: const ValueKey('carousel_main'),
+                            controller: _pageController,
+                            onPageChanged: (index) {
+                              setState(() {
+                                _virtualPage = index;
+                                _currentPage = index % 5;
+                              });
+                            },
+                            itemCount: 10000,
+                            itemBuilder: (context, index) {
+                              final int itemIndex = index % 5;
+                              return AnimatedBuilder(
+                                animation: _pageController,
+                                builder: (context, child) {
+                                  double scale = 0.82;
+                                  double opacity = 0.5;
+                                  double translation = 0.0;
 
-                                    return Transform(
-                                      transform: Matrix4.identity()
-                                        ..scale(scale)
-                                        ..translate(index > (_pageController.page ?? 1000) ? -translation : translation),
-                                      alignment: Alignment.center,
-                                      child: Opacity(
-                                        opacity: opacity,
-                                        child: child,
+                                  if (_pageController.hasClients) {
+                                    double page = _pageController.page ?? 1000.0;
+                                    double diff = (page - index).abs();
+                                    scale = (1 - (diff * 0.18)).clamp(0.82, 1.0);
+                                    opacity = (1 - (diff * 0.5)).clamp(0.5, 1.0);
+                                    translation = diff * 20.0;
+                                  } else if (index == 1000) {
+                                    scale = 1.0;
+                                    opacity = 1.0;
+                                  }
+
+                                  return Transform(
+                                    transform: Matrix4.identity()
+                                      ..scale(scale)
+                                      ..translate(
+                                        index > (_pageController.page ?? 1000)
+                                            ? -translation
+                                            : translation,
                                       ),
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: EdgeInsets.zero,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF3C3C3C),
-                                      borderRadius: BorderRadius.circular(16),
-                                      image: DecorationImage(
-                                        image: AssetImage(
-                                          [
-                                            'assets/images/Poster1.jpg',
-                                            'assets/images/Poster2.jpg',
-                                            'assets/images/Poster3.jpg',
-                                            'assets/images/Poster4.jpg',
-                                            'assets/images/Poster5.jpg',
-                                          ][itemIndex],
-                                        ),
-                                        fit: BoxFit.cover,
+                                    alignment: Alignment.center,
+                                    child: Opacity(
+                                      opacity: opacity,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.zero,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF3C3C3C),
+                                    borderRadius: BorderRadius.circular(16),
+                                    image: DecorationImage(
+                                      image: AssetImage(
+                                        [
+                                          'assets/images/Poster1.jpg',
+                                          'assets/images/Poster2.jpg',
+                                          'assets/images/Poster3.jpg',
+                                          'assets/images/Poster4.jpg',
+                                          'assets/images/Poster5.jpg',
+                                        ][itemIndex],
                                       ),
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        // Carousel Dots
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(5, (index) {
-                            bool isActive = _currentPage == index;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              height: 6,
-                              width: isActive ? 16 : 6,
-                              decoration: BoxDecoration(
-                                color: isActive ? Colors.grey.shade600 : Colors.grey.shade400,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-
-                  // Sticky Rate Cards
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _RateHeaderDelegate(
-                      child: ValueListenableBuilder<GoldRates>(
-                        valueListenable: priceService,
-                        builder: (context, rates, _) {
-                          final String formattedDate = DateFormat('dd-MMM-yy / hh:mm a').format(rates.updatedAt);
-                          
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Row(
-                              children: [
-                                // Gold Card
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFE599), // Light amber/yellow
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text('₹${rates.gold22k.toStringAsFixed(0)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                            Text(t('gold'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                            const Spacer(),
-                                            Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFFFC107), shape: BoxShape.circle)),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text('22KT Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                            Text('₹${(rates.gold22k * 8).toStringAsFixed(0)} / 8g', style: const TextStyle(fontSize: 10, color: Color(0xFFB71C1C), fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
-                                            const Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                // Silver Card
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF0F0F0), // Light grey
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text('₹${rates.silver.toStringAsFixed(2)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                            Text(t('silver'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                            const Spacer(),
-                                            Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFBDBDBD), shape: BoxShape.circle)),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        const Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text('Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                            Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          bool isActive = _currentPage == index;
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            height: 6,
+                            width: isActive ? 16 : 6,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           );
-                        },
+                        }),
                       ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _RateHeaderDelegate(
+                    child: ValueListenableBuilder<GoldRates>(
+                      valueListenable: priceService,
+                      builder: (context, rates, _) {
+                        final String formattedDate = DateFormat(
+                          'dd-MMM-yy / hh:mm a',
+                        ).format(rates.updatedAt);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFE599),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text('₹${rates.gold22k.toStringAsFixed(0)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                                          Text(t('gold'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          const Spacer(),
+                                          Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFFFC107), shape: BoxShape.circle)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('22KT Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                          Text('₹${(rates.gold22k * 8).toStringAsFixed(0)} / 8g', style: const TextStyle(fontSize: 10, color: Color(0xFFB71C1C), fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+                                          const Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0F0F0),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text('₹${rates.silver.toStringAsFixed(2)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                                          Text(t('silver'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          const Spacer(),
+                                          Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFBDBDBD), shape: BoxShape.circle)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                                          Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
-
-                  // Remaining Content - Solid White Block with No Curves
-                  SliverToBoxAdapter(
-                    child: Container(
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                        // My Passbook Section (Shows multiple cards if joined multiple times)
+                ),
+                SliverToBoxAdapter(
+                  child: Container(
+                    color: Colors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         if (_enrolledSchemes.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _buildSectionHeader(t('passbook_sub')),
                           const SizedBox(height: 12),
-                          SizedBox(
-                            height: 280, // Increased height for the detailed passbook card
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _enrolledSchemes.length,
-                              itemBuilder: (context, index) {
-                                final scheme = _enrolledSchemes[index];
-                                return Container(
-                                  width: MediaQuery.of(context).size.width * 0.95,
-                                  margin: const EdgeInsets.only(right: 12),
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        CupertinoPageRoute(
-                                          builder: (context) => PassbookPage(
-                                            userName: scheme['name'] ?? 'User',
-                                            passbookID: scheme['id'] ?? 'ID',
-                                            startDate: scheme['startDate'] ?? DateTime.now(),
-                                            schemeAmount: scheme['schemeAmount'] ?? 2000,
-                                            initialPaidCount: scheme['paidCount'] ?? 0,
-                                            initialTotalWeight: scheme['totalWeight'] ?? 0.0,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                          ..._enrolledSchemes.map((scheme) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
+                              child: InkWell(
+                                onTap: () {
+                                  if (scheme['schemeType'] == 'digigold') {
+                                    Navigator.push(context, CupertinoPageRoute(builder: (context) => DigiGoldPassbookPage(userName: scheme['name'] ?? 'User', passbookID: scheme['id'] ?? 'ID', startDate: scheme['startDate'] ?? DateTime.now())));
+                                  } else {
+                                    Navigator.push(context, CupertinoPageRoute(builder: (context) => PassbookPage(userName: scheme['name'] ?? 'User', passbookID: scheme['id'] ?? 'ID', startDate: scheme['startDate'] ?? DateTime.now(), schemeAmount: scheme['schemeAmount'] ?? 2000, initialPaidCount: scheme['paidCount'] ?? 0, initialTotalWeight: scheme['totalWeight'] ?? 0.0)));
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(24),
+                                child: Container(
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(24),
-                                    child: Container(
-                                      constraints: const BoxConstraints(minHeight: 260),
-                                      decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(24),
-                                          border: Border.all(color: const Color(0xFF410099).withOpacity(0.1), width: 1),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.05),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(24),
-                                          child: Stack(
-                                            children: [
-                                              // Top Purple Section with Mandala Pattern
-                                              Container(
-                                                height: 135,
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFF410099).withOpacity(0.95),
-                                                  image: const DecorationImage(
-                                                    image: AssetImage('assets/images/4614.jpg'),
-                                                    opacity: 0.15,
-                                                    repeat: ImageRepeat.repeat,
-                                                    fit: BoxFit.cover,
-                                                  ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Column(
+                                          children: [
+                                            // 1. Purple Top Section
+                                            Container(
+                                              width: double.infinity,
+                                              height: 180, // Reduced height
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF410099).withOpacity(0.95),
+                                                image: const DecorationImage(
+                                                  image: AssetImage('assets/images/4614.jpg'),
+                                                  opacity: 0.15,
+                                                  repeat: ImageRepeat.repeat,
+                                                  fit: BoxFit.cover,
                                                 ),
                                               ),
-                                              
-                                              Padding(
+                                              child: Padding(
                                                 padding: const EdgeInsets.all(16.0),
                                                 child: Column(
                                                   children: [
-                                                    // Header Row
+                                                    // User Info Row
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
-                                                        Text(scheme['name'] ?? 'Ambal Gold', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                                        Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(scheme['name'] ?? 'User', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                                            Text((scheme['schemeType'] == 'digigold' ? 'DIGI GOLD' : 'SUPER GOLD'), style: TextStyle(color: Colors.amber[400], fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                                                          ],
+                                                        ),
                                                         Text(scheme['id'] ?? 'AG-0000', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 1)),
                                                       ],
                                                     ),
-                                                    const SizedBox(height: 16),
-                                                    // Labels Row
+                                                    const SizedBox(height: 12),
+                                                    // Labels
                                                     const Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
@@ -525,102 +542,116 @@ class _HomePageState extends State<HomePage> {
                                                         Text('INSTALLMENT\'S PAID', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
                                                       ],
                                                     ),
-                                                    // Values Row
+                                                    // Values
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
                                                         Column(
                                                           crossAxisAlignment: CrossAxisAlignment.start,
                                                           children: [
-                                                            Text('₹${scheme['schemeAmount'] ?? 2000}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                                                            const Text('Per month', style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                            Text(scheme['schemeType'] == 'digigold' ? 'Flexible' : '₹${scheme['schemeAmount'] ?? 2000}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                                            Text(scheme['schemeType'] == 'digigold' ? 'Daily Savings' : 'Per month', style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
                                                           ],
                                                         ),
                                                         Text('${scheme['paidCount'] ?? 0}/12', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                                                       ],
                                                     ),
-                                                  ],
-                                                ),
-                                              ),
-
-                                              // Content in White Section
-                                              Padding(
-                                                padding: const EdgeInsets.fromLTRB(16, 145, 16, 16),
-                                                child: Column(
-                                                  children: [
-                                                    // Status Row (Now in White Section)
+                                                    const Spacer(),
+                                                    // Status Row
                                                     Row(
                                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                       children: [
                                                         Row(
                                                           children: [
-                                                            const Text('status: ', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                                                            const Text('status: ', style: TextStyle(color: Colors.white70, fontSize: 14)),
                                                             Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
                                                             const SizedBox(width: 6),
-                                                            Text(t('active'), style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+                                                            Text(t('active').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
                                                           ],
                                                         ),
                                                         Container(
                                                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                                          decoration: BoxDecoration(color: Colors.yellow[600], borderRadius: BorderRadius.circular(8)),
-                                                          child: const Text('SAVE NOW', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.yellow[600], 
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          child: const Text('SAVE NOW', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12)),
                                                         ),
                                                       ],
-                                                    ),
-                                                    const Spacer(),
-                                                    // Dates Row
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'] ?? DateTime.now())),
-                                                        _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 1, (scheme['startDate'] ?? DateTime.now()).day))),
-                                                        _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 12, (scheme['startDate'] ?? DateTime.now()).day))),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    // Progress Dots (Shrunken)
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: List.generate(12, (i) => Container(
-                                                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                                                        width: 7, height: 7,
-                                                        decoration: BoxDecoration(color: i < (scheme['paidCount'] ?? 0) ? Colors.green : Colors.grey[300], shape: BoxShape.circle),
-                                                      )),
                                                     ),
                                                   ],
                                                 ),
                                               ),
-                                              Positioned(
-                                                top: 100, // Adjusted for new purple height
-                                                left: 0, right: 0,
-                                                child: Center(
-                                                  child: Container(
-                                                    width: 70, height: 70,
-                                                    decoration: BoxDecoration(color: Colors.yellow[600], shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                                                    child: Column(
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: [
-                                                        const Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                        const Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                        const SizedBox(height: 2),
-                                                        Text('${(scheme['totalWeight'] ?? 0.0).toStringAsFixed(3)} g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
-                                                      ],
-                                                    ),
+                                            ),
+                                            // 2. White Bottom Section
+                                            Container(
+                                              width: double.infinity,
+                                              color: Colors.white,
+                                              padding: const EdgeInsets.fromLTRB(16, 35, 16, 12), // Reduced padding
+                                              child: Column(
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'] ?? DateTime.now())),
+                                                      Container(width: 1, height: 25, color: Colors.grey[200]),
+                                                      _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 1, (scheme['startDate'] ?? DateTime.now()).day))),
+                                                      Container(width: 1, height: 25, color: Colors.grey[200]),
+                                                      _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 12, (scheme['startDate'] ?? DateTime.now()).day))),
+                                                    ],
                                                   ),
-                                                ),
+                                                  const SizedBox(height: 12),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: List.generate(12, (i) => Container(
+                                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                                      width: 7, height: 7,
+                                                      decoration: BoxDecoration(
+                                                        color: i < (scheme['paidCount'] ?? 0) ? Colors.green : Colors.grey[200],
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    )),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
+                                            ),
+                                          ],
+                                        ),
+                                        // Floating Badge
+                                        Positioned(
+                                          top: 145, // Centered on the 180px transition line (180 - 35)
+                                          left: 0,
+                                          right: 0,
+                                          child: Center(
+                                            child: Container(
+                                              width: 70,
+                                              height: 70,
+                                              decoration: BoxDecoration(
+                                                color: Colors.yellow[600],
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 2),
+                                              ),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                                                  const Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
+                                                  const SizedBox(height: 2),
+                                                  Text('${(scheme['totalWeight'] ?? 0.0).toStringAsFixed(3)} g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              ),
-                            ),
+                                  ),
+                                ),
+                              );
+                            }),
                           const SizedBox(height: 12),
                         ],
-                        
+
                         const SizedBox(height: 32),
                         // Welcome Banner
                         Padding(
@@ -638,141 +669,97 @@ class _HomePageState extends State<HomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Welcome to the Ambal Jeweller !', style: TextStyle(color: Color(0xFFFFD54F), fontSize: 16, fontWeight: FontWeight.bold)),
+                                const Text(
+                                  'Welcome to the Ambal Jeweller !',
+                                  style: TextStyle(
+                                    color: Color(0xFFFFD54F),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 10),
                                 const Text(
                                   'The ideal place to join a savings scheme and save up to buy your dream jewellery. Ambal DigiGold empowers you to save & buy jewellery conveniently in the palm of your hand. Start Saving in Gold today',
-                                  style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFD54F),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: const Text('KNOW MORE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                                  child: const Text(
+                                    'KNOW MORE',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Saving Scheme Heading
                         _buildSectionHeader(t('savings_title')),
                         const SizedBox(height: 12),
-                        
-                        // Single Saving Scheme Card (Stitched Poster + Buttons)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Container(
-                            height: 230,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              children: [
-                                // Top Poster Image
-                                Expanded(
-                                  child: SizedBox.expand(
-                                    child: Image.asset(
-                                      'assets/images/Poster1.jpg',
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (ctx, err, st) => Container(
-                                        color: const Color(0xFF3C3C3C),
-                                        child: const Center(
-                                          child: Icon(Icons.image_outlined, color: Colors.white54, size: 48),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Bottom Action Bar (Stitched)
-                                Container(
-                                  height: 52,
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      // Join Now Button
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () async {
-                                            final result = await Navigator.push(
-                                              context,
-                                              CupertinoPageRoute(builder: (context) => const KYCFormPage()),
-                                            );
-                                            if (result != null && result is Map) {
-                                              setState(() {
-                                                _enrolledSchemes.add({
-                                                  'id': result['id'],
-                                                  'name': userNotifier.value.name,
-                                                  'startDate': DateTime.now(),
-                                                  'schemeAmount': result['schemeAmount'],
-                                                  'paidCount': 0,
-                                                  'totalWeight': 0.0,
-                                                });
-                                              });
-                                            }
-                                          },
-                                          child: Center(
-                                            child: Text(
-                                              t('buy_now').toUpperCase(),
-                                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      // Divider
-                                      Container(width: 0.5, height: 25, color: Colors.white30),
-                                      // Know More Button
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () {},
-                                          child: Center(
-                                            child: Text(
-                                              t('explore').toUpperCase(),
-                                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+
+                        // Saving Schemes Slider
+                        SizedBox(
+                          height: 230,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: [
+                              // 1. Super Gold (11 Months)
+                              _buildSchemeCard(
+                                context,
+                                name: 'SUPER GOLD',
+                                subtitle: '11 MONTHS PLAN',
+                                image: 'assets/images/Poster1.jpg',
+                                onJoin: () => _joinScheme(context, 'regular'),
+                                onExplore: () => _openDetails(context),
+                              ),
+                              const SizedBox(width: 16),
+                              
+                              // 2. Digi Gold (12 Months - Daily)
+                              _buildSchemeCard(
+                                context,
+                                name: 'DIGI GOLD',
+                                subtitle: 'DAILY SAVINGS PLAN',
+                                image: 'assets/images/Poster2.jpg',
+                                amountText: 'START FROM ₹100',
+                                onJoin: () => _joinScheme(context, 'digigold'),
+                                onExplore: () => _openDetails(context),
+                              ),
+                            ],
                           ),
                         ),
-                        
+
                         const Padding(
                           padding: EdgeInsets.all(16.0),
                           child: Text(
                             '*Choose from a range of savings products with unique benefits to suit your needs and convenience',
-                            style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 8),
-                        
 
                         const SizedBox(height: 32),
 
@@ -804,10 +791,17 @@ class _HomePageState extends State<HomePage> {
                                   width: double.infinity,
                                   height: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
-                                    color: Colors.grey.shade200,
-                                    child: const Center(child: Icon(Icons.map, color: Colors.grey, size: 48)),
-                                  ),
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        color: Colors.grey.shade200,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.map,
+                                            color: Colors.grey,
+                                            size: 48,
+                                          ),
+                                        ),
+                                      ),
                                 ),
                                 // Gradient Overlay for readability
                                 Positioned.fill(
@@ -816,7 +810,10 @@ class _HomePageState extends State<HomePage> {
                                       gradient: LinearGradient(
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
-                                        colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withOpacity(0.6),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -827,31 +824,55 @@ class _HomePageState extends State<HomePage> {
                                   left: 12,
                                   right: 12,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('Ambal Jewellery, Dindigul', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                                      Text('99/1, Main Road, Begambur, Dindigul', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                      Text(
+                                        'Ambal Jewellery, Dindigul',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        '99/1, Main Road, Begambur, Dindigul',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 // Pin Icon
                                 const Center(
-                                  child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: Colors.red,
+                                    size: 40,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Contact Banner
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
                             decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFF512DA8), width: 1.5),
+                              border: Border.all(
+                                color: const Color(0xFF512DA8),
+                                width: 1.5,
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -860,17 +881,33 @@ class _HomePageState extends State<HomePage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(t('have_questions'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                    Text(
+                                      t('have_questions'),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text(t('get_in_touch'), style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                                    Text(
+                                      t('get_in_touch'),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                Icon(Icons.savings, color: Colors.red.shade300, size: 48), // Piggy bank equivalent
+                                Icon(
+                                  Icons.savings,
+                                  color: Colors.red.shade300,
+                                  size: 48,
+                                ), // Piggy bank equivalent
                               ],
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 50),
                       ],
                     ),
@@ -881,115 +918,321 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
 
-          // 3. Locked App Bar Area
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.transparent,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Logo and Title
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Colors.white.withOpacity(0.15),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/AMBALLOGO-2.png',
-                                width: 28,
-                                height: 28,
-                                fit: BoxFit.contain,
-                                cacheWidth: 120,
-                                cacheHeight: 120,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.broken_image, color: Colors.white, size: 16);
-                                },
+        // 3. Locked App Bar Area
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            decoration: const BoxDecoration(color: Colors.transparent),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 12.0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Logo and Title
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.white.withOpacity(0.15),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/AMBALLOGO-2.png',
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              cacheWidth: 120,
+                              cacheHeight: 120,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.broken_image,
+                                  color: Colors.white,
+                                  size: 16,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ambal Jewellery',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Ambal Jewellery', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                              Text('Dindigul', style: TextStyle(color: Colors.white, fontSize: 12)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      // Greeting and Notification
-                      Row(
-                        children: [
-                          ValueListenableBuilder<UserState>(
-                            valueListenable: userNotifier,
-                            builder: (context, user, child) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text('hello👋', style: TextStyle(color: Colors.white, fontSize: 11)),
-                                  if (user.name != null && user.name!.isNotEmpty)
-                                    Text(
-                                      user.name!.contains('!') ? user.name! : '${user.name!}!', 
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                CupertinoPageRoute(builder: (context) => const NotificationsPage()),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Stack(
+                            Text(
+                              'Dindigul',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    // Greeting and Notification
+                    Row(
+                      children: [
+                        ValueListenableBuilder<UserState>(
+                          valueListenable: userNotifier,
+                          builder: (context, user, child) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                const Text(
+                                  'hello👋',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                if (user.name != null && user.name!.isNotEmpty)
+                                  Text(
+                                    user.name!.contains('!')
+                                        ? user.name!
+                                        : '${user.name!}!',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (context) => const NotificationsPage(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_none,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF00E676),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.notifications_none, color: Colors.white, size: 22),
                                 ),
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF00E676),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                )
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
 
+  Future<void> _joinScheme(BuildContext context, String? type) async {
+    final result = await Navigator.push(
+      context,
+      CupertinoPageRoute(builder: (context) => KYCFormPage(schemeType: type)),
+    );
+    if (result != null && result is Map) {
+      // The userNotifier listener will call _syncSchemes automatically
+      // after userNotifier.setUser is called inside KYCFormPage
+    }
+  }
+
+  void _openDetails(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(builder: (context) => const SchemeDetailsPage()),
+    );
+  }
+
+  Widget _buildSchemeCard(
+    BuildContext context, {
+    required String name,
+    required String subtitle,
+    required String image,
+    String? amountText,
+    required VoidCallback onJoin,
+    required VoidCallback onExplore,
+  }) {
+    return Container(
+      height: 230,
+      width: MediaQuery.of(context).size.width * 0.85,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
-      );
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Expanded(
+            child: SizedBox.expand(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (ctx, err, st) => Container(
+                      color: const Color(0xFF3C3C3C),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: Colors.white54,
+                          size: 48,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFFFD54F).withOpacity(0.5),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              color: Color(0xFFFFD54F),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (amountText != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              amountText,
+                              style: const TextStyle(
+                                color: Colors.greenAccent,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            height: 52,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF6A1B9A), Color(0xFF4A148C)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: onJoin,
+                    child: Center(
+                      child: Text(
+                        t('buy_now').toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(width: 0.5, height: 20, color: Colors.white30),
+                Expanded(
+                  child: InkWell(
+                    onTap: onExplore,
+                    child: Center(
+                      child: Text(
+                        t('explore').toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPassbookInfoColumn(String label, String value) {
@@ -998,48 +1241,19 @@ class _HomePageState extends State<HomePage> {
       children: [
         Text(label, style: const TextStyle(color: Colors.grey, fontSize: 9)),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildSkeletonShell(Color primaryPurple) {
-    return Column(
-      children: [
-        // Fake AppBar to prevent "jump" when real content loads
-        Container(
-          height: 100,
-          color: primaryPurple,
-          padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle)),
-              Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10))),
-              Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle)),
-            ],
-          ),
-        ),
-        const Spacer(),
-        // Simple branding text that matches the premium feel
-        const Text(
-          'Ambal Gold',
-          style: TextStyle(
-            color: Color(0xFF410099),
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.0,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Dindigul Market Live',
-          style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const Spacer(flex: 2),
-      ],
-    );
-  }
+
 }
 
 class _RateHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -1048,7 +1262,11 @@ class _RateHeaderDelegate extends SliverPersistentHeaderDelegate {
   _RateHeaderDelegate({required this.child});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1063,5 +1281,6 @@ class _RateHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 115;
 
   @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
 }

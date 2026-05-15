@@ -141,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const Divider(),
             _detailRow(Icons.phone_android_outlined, t('phone'), user.phone ?? 'Not Registered'),
             const Divider(),
-            _detailRow(Icons.fingerprint_rounded, 'Passbook ID', user.passbookId ?? 'Not Generated'),
+            _detailRow(Icons.fingerprint_rounded, 'Passbook ID', user.schemes.isNotEmpty ? user.schemes.map((s) => s.id).join(', ') : 'Not Generated'),
             const Divider(),
             _detailRow(Icons.verified_outlined, t('status'), user.name != null ? t('verified') : t('guest')),
             const SizedBox(height: 30),
@@ -243,13 +243,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     }),
                     _buildMenuItem(Icons.history, t('history'), t('history_sub'), () {
                       if (isRegistered) {
-                        Navigator.push(context, CupertinoPageRoute(builder: (context) => PassbookPage(
-                          userName: user.name!,
-                          passbookID: user.passbookId ?? 'AJDGL0000000',
-                          startDate: user.startDate ?? DateTime.now(),
-                          initialPaidCount: user.paidCount,
-                          initialTotalWeight: user.totalWeight,
-                        )));
+                        Navigator.push(context, CupertinoPageRoute(builder: (context) {
+                          if (user.schemes.isEmpty) {
+                             return const ProfilePage(); // Should not happen if isRegistered
+                          }
+                          final firstScheme = user.schemes.first;
+                          return PassbookPage(
+                            userName: user.name!,
+                            passbookID: firstScheme.id,
+                            startDate: firstScheme.startDate,
+                            initialPaidCount: firstScheme.paidCount,
+                            initialTotalWeight: firstScheme.totalWeight,
+                            schemeAmount: firstScheme.schemeAmount,
+                          );
+                        }));
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('reg_prompt'))));
                       }

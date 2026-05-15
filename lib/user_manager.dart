@@ -1,26 +1,64 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class SchemeData {
+  String id;
+  DateTime startDate;
+  int paidCount;
+  double totalWeight;
+  int schemeAmount;
+  String? schemeType;
+
+  SchemeData({
+    required this.id,
+    required this.startDate,
+    this.paidCount = 0,
+    this.totalWeight = 0.0,
+    required this.schemeAmount,
+    this.schemeType,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'startDate': startDate.toIso8601String(),
+        'paidCount': paidCount,
+        'totalWeight': totalWeight,
+        'schemeAmount': schemeAmount,
+        'schemeType': schemeType,
+      };
+
+  factory SchemeData.fromJson(Map<String, dynamic> json) => SchemeData(
+        id: json['id'],
+        startDate: DateTime.parse(json['startDate']),
+        paidCount: json['paidCount'] ?? 0,
+        totalWeight: (json['totalWeight'] ?? 0.0).toDouble(),
+        schemeAmount: json['schemeAmount'] ?? 2000,
+        schemeType: json['schemeType'],
+      );
+}
 
 class UserState {
   String? name;
   String? phone;
-  String? passbookId;
-  DateTime? startDate;
   String? mpin;
-  int paidCount;
-  double totalWeight;
-  int schemeAmount;
+  List<SchemeData> schemes;
 
   UserState({
-    this.name, 
-    this.phone, 
-    this.passbookId, 
-    this.startDate, 
+    this.name,
+    this.phone,
     this.mpin,
-    this.paidCount = 0,
-    this.totalWeight = 0.0,
-    this.schemeAmount = 2000,
+    this.schemes = const [],
   });
+
+  // Helper to get a scheme by ID
+  SchemeData? getScheme(String id) {
+    try {
+      return schemes.firstWhere((s) => s.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class UserNotifier extends ValueNotifier<UserState> {
@@ -28,16 +66,18 @@ class UserNotifier extends ValueNotifier<UserState> {
 
   Future<void> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
-    String? dateStr = prefs.getString('start_date');
+    final schemesJson = prefs.getString('user_schemes');
+    List<SchemeData> schemes = [];
+    if (schemesJson != null) {
+      final List<dynamic> decoded = jsonDecode(schemesJson);
+      schemes = decoded.map((item) => SchemeData.fromJson(item)).toList();
+    }
+
     value = UserState(
       name: prefs.getString('user_name'),
       phone: prefs.getString('user_phone'),
-      passbookId: prefs.getString('passbook_id'),
-      startDate: dateStr != null ? DateTime.tryParse(dateStr) : null,
       mpin: prefs.getString('user_mpin'),
-      paidCount: prefs.getInt('paid_count') ?? 0,
-      totalWeight: prefs.getDouble('total_weight') ?? 0.0,
-      schemeAmount: prefs.getInt('scheme_amount') ?? 2000,
+      schemes: schemes,
     );
     notifyListeners();
   }
@@ -48,42 +88,88 @@ class UserNotifier extends ValueNotifier<UserState> {
     required String passbookId,
     required DateTime startDate,
     required int schemeAmount,
+    String? schemeType,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_name', name);
     await prefs.setString('user_phone', phone);
-    await prefs.setString('passbook_id', passbookId);
-    await prefs.setString('start_date', startDate.toIso8601String());
-    await prefs.setInt('scheme_amount', schemeAmount);
-    
+
+    final newScheme = SchemeData(
+      id: passbookId,
+      startDate: startDate,
+      schemeAmount: schemeAmount,
+      schemeType: schemeType,
+    );
+
+    List<SchemeData> schemes = [...value.schemes, newScheme];
+    await _saveSchemes(prefs, schemes);
+
     value = UserState(
       name: name,
       phone: phone,
-      passbookId: passbookId,
-      startDate: startDate,
       mpin: value.mpin,
-      paidCount: 0,
-      totalWeight: 0.0,
-      schemeAmount: schemeAmount,
+      schemes: schemes,
     );
     notifyListeners();
   }
 
-  Future<void> updateProgress(int count, double weight) async {
+  Future<void> addScheme({
+    required String passbookId,
+    required DateTime startDate,
+    required int schemeAmount,
+    String? schemeType,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('paid_count', count);
-    await prefs.setDouble('total_weight', weight);
-    
+    final newScheme = SchemeData(
+      id: passbookId,
+      startDate: startDate,
+      schemeAmount: schemeAmount,
+      schemeType: schemeType,
+    );
+
+    List<SchemeData> schemes = [...value.schemes, newScheme];
+    await _saveSchemes(prefs, schemes);
+
     value = UserState(
       name: value.name,
       phone: value.phone,
-      passbookId: value.passbookId,
-      startDate: value.startDate,
       mpin: value.mpin,
-      paidCount: count,
-      totalWeight: weight,
+      schemes: schemes,
     );
     notifyListeners();
+  }
+
+  Future<void> updateProgress(String schemeId, int count, double weight) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    List<SchemeData> schemes = value.schemes.map((s) {
+      if (s.id == schemeId) {
+        return SchemeData(
+          id: s.id,
+          startDate: s.startDate,
+          paidCount: count,
+          totalWeight: weight,
+          schemeAmount: s.schemeAmount,
+          schemeType: s.schemeType,
+        );
+      }
+      return s;
+    }).toList();
+
+    await _saveSchemes(prefs, schemes);
+
+    value = UserState(
+      name: value.name,
+      phone: value.phone,
+      mpin: value.mpin,
+      schemes: schemes,
+    );
+    notifyListeners();
+  }
+
+  Future<void> _saveSchemes(SharedPreferences prefs, List<SchemeData> schemes) async {
+    final jsonStr = jsonEncode(schemes.map((s) => s.toJson()).toList());
+    await prefs.setString('user_schemes', jsonStr);
   }
 
   Future<void> setMPIN(String pin) async {
@@ -92,12 +178,8 @@ class UserNotifier extends ValueNotifier<UserState> {
     value = UserState(
       name: value.name,
       phone: value.phone,
-      passbookId: value.passbookId,
-      startDate: value.startDate,
       mpin: pin,
-      paidCount: value.paidCount,
-      totalWeight: value.totalWeight,
-      schemeAmount: value.schemeAmount,
+      schemes: value.schemes,
     );
     notifyListeners();
   }
@@ -113,11 +195,7 @@ class UserNotifier extends ValueNotifier<UserState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_name');
     await prefs.remove('user_phone');
-    await prefs.remove('passbook_id');
-    await prefs.remove('start_date');
-    await prefs.remove('paid_count');
-    await prefs.remove('total_weight');
-    await prefs.remove('scheme_amount');
+    await prefs.remove('user_schemes');
     value = UserState(mpin: value.mpin);
     notifyListeners();
   }

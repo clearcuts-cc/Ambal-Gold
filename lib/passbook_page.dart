@@ -785,7 +785,7 @@ class _PassbookPageState extends State<PassbookPage> {
       });
 
       // Update global user state immediately
-      userNotifier.updateProgress(paidCount, totalWeight);
+      userNotifier.updateProgress(widget.passbookID, paidCount, totalWeight);
 
       _showSuccessDialog(targetIndex, weightAdded);
     });

@@ -7,14 +7,14 @@ import 'passbook_page.dart';
 import 'user_manager.dart';
 
 class KYCFormPage extends StatefulWidget {
-  const KYCFormPage({super.key});
+  final String? schemeType;
+  const KYCFormPage({super.key, this.schemeType});
 
   @override
   State<KYCFormPage> createState() => _KYCFormPageState();
 }
 
 class _KYCFormPageState extends State<KYCFormPage> {
-  final PageController _pageController = PageController();
   int _currentStep = 0;
   
   final TextEditingController _phoneController = TextEditingController();
@@ -34,6 +34,30 @@ class _KYCFormPageState extends State<KYCFormPage> {
 
   int _selectedSchemeAmount = 2000; // Default scheme
 
+  @override
+  void initState() {
+    super.initState();
+    if (userNotifier.value.name != null && userNotifier.value.name!.isNotEmpty) {
+      _nameController.text = userNotifier.value.name!;
+      _phoneController.text = userNotifier.value.phone!;
+      _aadhaarController.text = "XXXXXXXXXXXX"; // Masked
+      _addressController.text = "Saved Address"; // Placeholder
+      
+      if (widget.schemeType == 'digigold') {
+        // For existing users joining Digi Gold, we don't need any more info
+        // We'll jump to a dummy "Final Detail" step or just finish
+        _currentStep = 4;
+      } else {
+        // For Super Gold, jump straight to Amount Selection (Step 5)
+        _currentStep = 5;
+      }
+    }
+    
+    if (widget.schemeType == 'digigold') {
+      _selectedSchemeAmount = 0; // Flexible
+    }
+  }
+
   void _nextStep() {
     // Validation
     if (_currentStep == 0 && _phoneController.text.length != 10) return;
@@ -42,14 +66,12 @@ class _KYCFormPageState extends State<KYCFormPage> {
     if (_currentStep == 2 && _nameController.text.isEmpty) return;
     if (_currentStep == 4 && _addressController.text.isEmpty) return;
 
-    if (_currentStep < 5) {
+    int lastStep = widget.schemeType == 'digigold' ? 4 : 5;
+
+    if (_currentStep < lastStep) {
       setState(() {
         _currentStep++;
       });
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-      );
     } else {
       _finishRegistration();
     }
@@ -60,10 +82,6 @@ class _KYCFormPageState extends State<KYCFormPage> {
       setState(() {
         _currentStep--;
       });
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-      );
     } else {
       Navigator.pop(context);
     }
@@ -104,14 +122,26 @@ class _KYCFormPageState extends State<KYCFormPage> {
     String passbookID = _generatePassbookID();
     DateTime startDate = DateTime.now();
     
-    // Save to global state (which also saves to SharedPreferences)
-    await userNotifier.setUser(
-      name: _nameController.text,
-      phone: _phoneController.text,
-      passbookId: passbookID,
-      startDate: startDate,
-      schemeAmount: _selectedSchemeAmount,
-    );
+    // Save to global state
+    if (userNotifier.value.name != null && userNotifier.value.name!.isNotEmpty) {
+      // User already exists, just add scheme
+      await userNotifier.addScheme(
+        passbookId: passbookID,
+        startDate: startDate,
+        schemeAmount: _selectedSchemeAmount,
+        schemeType: widget.schemeType,
+      );
+    } else {
+      // New user registration
+      await userNotifier.setUser(
+        name: _nameController.text,
+        phone: _phoneController.text,
+        passbookId: passbookID,
+        startDate: startDate,
+        schemeAmount: _selectedSchemeAmount,
+        schemeType: widget.schemeType,
+      );
+    }
 
     if (mounted) {
       Navigator.pop(context); // Close loading dialog
@@ -120,6 +150,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
         'id': passbookID,
         'name': _nameController.text,
         'schemeAmount': _selectedSchemeAmount,
+        'schemeType': widget.schemeType ?? 'regular',
       });
     }
   }
@@ -175,53 +206,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
               alignment: Alignment.bottomCenter,
               child: SizedBox(
                 height: 120, // Fixed height for input area
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildBottomInput(
-                      0,
-                      _phoneController,
-                      'Phone Number',
-                      TextInputType.phone,
-                      prefix: '+91 ',
-                      hint: '00000 00000',
-                      maxLength: 10,
-                    ),
-                    _buildBottomInput(
-                      1,
-                      _otpController,
-                      'Enter 4-digit OTP',
-                      TextInputType.number,
-                      hint: '0000',
-                      maxLength: 4,
-                    ),
-                    _buildBottomInput(
-                      2,
-                      _nameController,
-                      'Full Name',
-                      TextInputType.name,
-                      hint: 'Enter your name',
-                    ),
-                    _buildBottomInput(
-                      3,
-                      _aadhaarController,
-                      'Aadhaar Number',
-                      TextInputType.number,
-                      hint: '0000 0000 0000',
-                      maxLength: 12,
-                    ),
-                    _buildBottomInput(
-                      4,
-                      _addressController,
-                      'Full Address',
-                      TextInputType.multiline,
-                      hint: 'Street, City, Pincode...',
-                      maxLines: 2,
-                    ),
-                    _buildSchemeSelection(),
-                  ],
-                ),
+                child: _buildCurrentBottomInput(),
               ),
             ),
 
@@ -233,7 +218,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
                 onPressed: _nextStep,
                 backgroundColor: primaryPurple,
                 child: Icon(
-                  _currentStep == 5 ? Icons.check : Icons.arrow_forward_ios_rounded,
+                  _currentStep == (widget.schemeType == 'digigold' ? 4 : 5) ? Icons.check : Icons.arrow_forward_ios_rounded,
                   color: Colors.white,
                   size: 20,
                 ),
@@ -322,6 +307,60 @@ class _KYCFormPageState extends State<KYCFormPage> {
     );
   }
 
+  Widget _buildCurrentBottomInput() {
+    switch (_currentStep) {
+      case 0:
+        return _buildBottomInput(
+          0,
+          _phoneController,
+          'Phone Number',
+          TextInputType.phone,
+          prefix: '+91 ',
+          hint: '00000 00000',
+          maxLength: 10,
+        );
+      case 1:
+        return _buildBottomInput(
+          1,
+          _otpController,
+          'Enter 4-digit OTP',
+          TextInputType.number,
+          hint: '0000',
+          maxLength: 4,
+        );
+      case 2:
+        return _buildBottomInput(
+          2,
+          _nameController,
+          'Full Name',
+          TextInputType.name,
+          hint: 'Enter your name',
+        );
+      case 3:
+        return _buildBottomInput(
+          3,
+          _aadhaarController,
+          'Aadhaar Number',
+          TextInputType.number,
+          hint: '0000 0000 0000',
+          maxLength: 12,
+        );
+      case 4:
+        return _buildBottomInput(
+          4,
+          _addressController,
+          'Full Address',
+          TextInputType.multiline,
+          hint: 'Street, City, Pincode...',
+          maxLines: 2,
+        );
+      case 5:
+        return _buildSchemeSelection();
+      default:
+        return const SizedBox();
+    }
+  }
+
   Widget _buildBottomInput(int index, TextEditingController controller, String label, TextInputType type, {String? prefix, String? hint, int maxLines = 1, int? maxLength}) {
     return Container(
       alignment: Alignment.bottomCenter,
@@ -380,7 +419,7 @@ class _KYCFormPageState extends State<KYCFormPage> {
           ),
           const SizedBox(height: 8),
           Row(
-            children: [2000, 4000, 5000].map((amount) {
+            children: [2000, 4000, 10000].map((amount) {
               bool isSelected = _selectedSchemeAmount == amount;
               return Padding(
                 padding: const EdgeInsets.only(right: 12.0),
