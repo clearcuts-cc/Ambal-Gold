@@ -392,30 +392,78 @@ class _HomePageState extends State<HomePage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          Text('₹${rates.gold22k.toStringAsFixed(0)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                          Text(t('gold'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          Text(
+                                            '₹${rates.gold22k.toStringAsFixed(0)} ',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            t('gold'),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                           const Spacer(),
-                                          Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFFFC107), shape: BoxShape.circle)),
+                                          Container(
+                                            width: 12,
+                                            height: 12,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFFFC107),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Text('22KT Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                          Text('₹${(rates.gold22k * 8).toStringAsFixed(0)} / 8g', style: const TextStyle(fontSize: 10, color: Color(0xFFB71C1C), fontWeight: FontWeight.bold)),
+                                          const Text(
+                                            '22KT Per gram',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹${(rates.gold22k * 8).toStringAsFixed(0)} / 8g',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFFB71C1C),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
-                                          const Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                          Text(
+                                            formattedDate,
+                                            style: const TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                          const Text(
+                                            'Live',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -431,26 +479,66 @@ class _HomePageState extends State<HomePage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          Text('₹${rates.silver.toStringAsFixed(2)} ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-                                          Text(t('silver'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          Text(
+                                            '₹${rates.silver.toStringAsFixed(2)} ',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            t('silver'),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                           const Spacer(),
-                                          Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFBDBDBD), shape: BoxShape.circle)),
+                                          Container(
+                                            width: 12,
+                                            height: 12,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFBDBDBD),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
                                       const Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text('Per gram', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                                          Text('Live', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                          Text(
+                                            'Per gram',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Live',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: Colors.green,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(formattedDate, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+                                      Text(
+                                        formattedDate,
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -468,191 +556,68 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (_enrolledSchemes.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          _buildSectionHeader(t('passbook_sub')),
-                          const SizedBox(height: 12),
-                          ..._enrolledSchemes.map((scheme) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
-                              child: InkWell(
-                                onTap: () {
-                                  if (scheme['schemeType'] == 'digigold') {
-                                    Navigator.push(context, CupertinoPageRoute(builder: (context) => DigiGoldPassbookPage(userName: scheme['name'] ?? 'User', passbookID: scheme['id'] ?? 'ID', startDate: scheme['startDate'] ?? DateTime.now())));
-                                  } else {
-                                    Navigator.push(context, CupertinoPageRoute(builder: (context) => PassbookPage(userName: scheme['name'] ?? 'User', passbookID: scheme['id'] ?? 'ID', startDate: scheme['startDate'] ?? DateTime.now(), schemeAmount: scheme['schemeAmount'] ?? 2000, initialPaidCount: scheme['paidCount'] ?? 0, initialTotalWeight: scheme['totalWeight'] ?? 0.0)));
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(24),
-                                child: Container(
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
+                        if (_enrolledSchemes.isNotEmpty)
+                          ...(() {
+                            final Map<String, List<Map<String, dynamic>>>
+                                grouped = {};
+                            for (var s in _enrolledSchemes) {
+                              final type = s['schemeType'] ?? 'supergold';
+                              if (!grouped.containsKey(type)) grouped[type] = [];
+                              grouped[type]!.add(s);
+                            }
+
+                            return grouped.entries.map((entry) {
+                              final schemes = entry.value;
+                              final typeLabel = entry.key == 'digigold'
+                                  ? 'Digi Gold Passbooks'
+                                  : 'Super Gold Passbooks';
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                      vertical: 12.0,
+                                    ),
+                                    child: Text(
+                                      typeLabel,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                        letterSpacing: 0.5,
                                       ),
-                                    ],
-                                  ),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        Column(
-                                          children: [
-                                            // 1. Purple Top Section
-                                            Container(
-                                              width: double.infinity,
-                                              height: 180, // Reduced height
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF410099).withOpacity(0.95),
-                                                image: const DecorationImage(
-                                                  image: AssetImage('assets/images/4614.jpg'),
-                                                  opacity: 0.15,
-                                                  repeat: ImageRepeat.repeat,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(16.0),
-                                                child: Column(
-                                                  children: [
-                                                    // User Info Row
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(scheme['name'] ?? 'User', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                                            Text((scheme['schemeType'] == 'digigold' ? 'DIGI GOLD' : 'SUPER GOLD'), style: TextStyle(color: Colors.amber[400], fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                                                          ],
-                                                        ),
-                                                        Text(scheme['id'] ?? 'AG-0000', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 1)),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 12),
-                                                    // Labels
-                                                    const Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Text('SCHEME AMOUNT', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
-                                                        Text('INSTALLMENT\'S PAID', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
-                                                      ],
-                                                    ),
-                                                    // Values
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(scheme['schemeType'] == 'digigold' ? 'Flexible' : '₹${scheme['schemeAmount'] ?? 2000}', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                                                            Text(scheme['schemeType'] == 'digigold' ? 'Daily Savings' : 'Per month', style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                          ],
-                                                        ),
-                                                        Text('${scheme['paidCount'] ?? 0}/12', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                                                      ],
-                                                    ),
-                                                    const Spacer(),
-                                                    // Status Row
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        Row(
-                                                          children: [
-                                                            const Text('status: ', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                                                            Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-                                                            const SizedBox(width: 6),
-                                                            Text(t('active').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-                                                          ],
-                                                        ),
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.yellow[600], 
-                                                            borderRadius: BorderRadius.circular(8),
-                                                          ),
-                                                          child: const Text('SAVE NOW', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12)),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            // 2. White Bottom Section
-                                            Container(
-                                              width: double.infinity,
-                                              color: Colors.white,
-                                              padding: const EdgeInsets.fromLTRB(16, 35, 16, 12), // Reduced padding
-                                              child: Column(
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'] ?? DateTime.now())),
-                                                      Container(width: 1, height: 25, color: Colors.grey[200]),
-                                                      _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 1, (scheme['startDate'] ?? DateTime.now()).day))),
-                                                      Container(width: 1, height: 25, color: Colors.grey[200]),
-                                                      _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 12, (scheme['startDate'] ?? DateTime.now()).day))),
-                                                    ],
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    children: List.generate(12, (i) => Container(
-                                                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                                                      width: 7, height: 7,
-                                                      decoration: BoxDecoration(
-                                                        color: i < (scheme['paidCount'] ?? 0) ? Colors.green : Colors.grey[200],
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    )),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        // Floating Badge
-                                        Positioned(
-                                          top: 145, // Centered on the 180px transition line (180 - 35)
-                                          left: 0,
-                                          right: 0,
-                                          child: Center(
-                                            child: Container(
-                                              width: 70,
-                                              height: 70,
-                                              decoration: BoxDecoration(
-                                                color: Colors.yellow[600],
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: Colors.white, width: 2),
-                                              ),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                children: [
-                                                  const Text('TOTAL', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                  const Text('WEIGHT SAVED', style: TextStyle(fontSize: 6, fontWeight: FontWeight.bold)),
-                                                  const SizedBox(height: 2),
-                                                  Text('${(scheme['totalWeight'] ?? 0.0).toStringAsFixed(3)} g', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ),
-                                ),
+                                  SizedBox(
+                                    height: 300,
+                                    child: PageView.builder(
+                                      controller: PageController(
+                                        viewportFraction: 1.0,
+                                      ),
+                                      padEnds: false,
+                                      itemCount: schemes.length,
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 8.0,
+                                          ),
+                                          child: _buildPassbookCard(
+                                            schemes[index],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                               );
-                            }),
-                          const SizedBox(height: 12),
-                        ],
+                            }).toList();
+                          }()),
 
                         const SizedBox(height: 32),
+
                         // Welcome Banner
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -722,7 +687,6 @@ class _HomePageState extends State<HomePage> {
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             children: [
-                              // 1. Super Gold (11 Months)
                               _buildSchemeCard(
                                 context,
                                 name: 'SUPER GOLD',
@@ -732,8 +696,6 @@ class _HomePageState extends State<HomePage> {
                                 onExplore: () => _openDetails(context),
                               ),
                               const SizedBox(width: 16),
-                              
-                              // 2. Digi Gold (12 Months - Daily)
                               _buildSchemeCard(
                                 context,
                                 name: 'DIGI GOLD',
@@ -759,11 +721,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
 
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 40),
 
-                        const SizedBox(height: 32),
-
-                        // Our Showroom Section with Map
+                        // Our Showroom Section
                         _buildSectionHeader(t('showroom_title')),
                         const SizedBox(height: 12),
                         Padding(
@@ -785,25 +745,14 @@ class _HomePageState extends State<HomePage> {
                             clipBehavior: Clip.antiAlias,
                             child: Stack(
                               children: [
-                                // Realistic Map Visualization
                                 Image.network(
-                                  'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2000&auto=format&fit=crop', // Better stable map image
+                                  'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2000&auto=format&fit=crop',
                                   width: double.infinity,
                                   height: double.infinity,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        color: Colors.grey.shade200,
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.map,
-                                            color: Colors.grey,
-                                            size: 48,
-                                          ),
-                                        ),
-                                      ),
+                                      Container(color: Colors.grey.shade200),
                                 ),
-                                // Gradient Overlay for readability
                                 Positioned.fill(
                                   child: Container(
                                     decoration: BoxDecoration(
@@ -818,7 +767,6 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 ),
-                                // Address Text
                                 const Positioned(
                                   bottom: 12,
                                   left: 12,
@@ -845,7 +793,6 @@ class _HomePageState extends State<HomePage> {
                                     ],
                                   ),
                                 ),
-                                // Pin Icon
                                 const Center(
                                   child: Icon(
                                     Icons.location_on,
@@ -864,10 +811,7 @@ class _HomePageState extends State<HomePage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               border: Border.all(
                                 color: const Color(0xFF512DA8),
@@ -902,12 +846,11 @@ class _HomePageState extends State<HomePage> {
                                   Icons.savings,
                                   color: Colors.red.shade300,
                                   size: 48,
-                                ), // Piggy bank equivalent
+                                ),
                               ],
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 50),
                       ],
                     ),
@@ -1231,6 +1174,276 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+   Widget _buildPassbookCard(Map<String, dynamic> scheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          if (scheme['schemeType'] == 'digigold') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DigiGoldPassbookPage(
+                  userName: scheme['name'] ?? 'User',
+                  passbookID: scheme['id'] ?? 'PB000',
+                  startDate: scheme['startDate'] ?? DateTime.now(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PassbookPage(
+                  userName: scheme['name'] ?? 'User',
+                  passbookID: scheme['id'] ?? 'PB000',
+                  startDate: scheme['startDate'] ?? DateTime.now(),
+                  schemeAmount: scheme['schemeAmount'] ?? 2000,
+                  initialPaidCount: scheme['paidCount'] ?? 0,
+                  initialTotalWeight: scheme['totalWeight'] ?? 0.0,
+                ),
+              ),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(32),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias, // Ensure top purple section respects card curvature
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF410099).withOpacity(0.95),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/4614.jpg'),
+                        opacity: 0.15,
+                        repeat: ImageRepeat.repeat,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    scheme['name'] ?? 'User',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    (scheme['schemeType'] == 'digigold' ? 'DIGI GOLD' : 'SUPER GOLD'),
+                                    style: TextStyle(
+                                      color: Colors.amber[400],
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                scheme['id'] ?? 'AG-0000',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 10,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('SCHEME AMOUNT', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
+                              Text('INSTALLMENT\'S PAID', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    scheme['schemeType'] == 'digigold' ? 'Flexible' : '₹${scheme['schemeAmount'] ?? 2000}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  Text(
+                                    scheme['schemeType'] == 'digigold' ? 'Daily Savings' : 'Per month',
+                                    style: const TextStyle(
+                                      color: Colors.greenAccent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '${scheme['paidCount'] ?? 0}/12',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text('status: ', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    t('active').toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.yellow[600],
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'SAVE NOW',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(16, 40, 16, 8),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildPassbookInfoColumn('Date of Joining', DateFormat('dd-MMM-yyyy').format(scheme['startDate'] ?? DateTime.now())),
+                            Container(width: 1, height: 25, color: Colors.grey[200]),
+                            _buildPassbookInfoColumn('Next Due Date', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 1, (scheme['startDate'] ?? DateTime.now()).day))),
+                            Container(width: 1, height: 25, color: Colors.grey[200]),
+                            _buildPassbookInfoColumn('Date of maturity', DateFormat('dd-MMM-yyyy').format(DateTime((scheme['startDate'] ?? DateTime.now()).year, (scheme['startDate'] ?? DateTime.now()).month + 12, (scheme['startDate'] ?? DateTime.now()).day))),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(12, (i) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            width: 6, height: 6,
+                            decoration: BoxDecoration(
+                              color: i < (scheme['paidCount'] ?? 0) ? Colors.green : Colors.grey[200],
+                              shape: BoxShape.circle,
+                            ),
+                          )),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 142.5, // Correctly centers 75px badge on 180px split line (180 - 75/2)
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 75,
+                    height: 75,
+                    decoration: BoxDecoration(
+                      color: Colors.yellow[600],
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('TOTAL', style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold)),
+                        const Text('WEIGHT SAVED', style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${(scheme['totalWeight'] ?? 0.0).toStringAsFixed(3)} g',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
