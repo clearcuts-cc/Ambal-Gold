@@ -18,6 +18,11 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
+    
+    // Use toolchain to avoid Java 26 issues
+    kotlin {
+        jvmToolchain(17)
+    }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).

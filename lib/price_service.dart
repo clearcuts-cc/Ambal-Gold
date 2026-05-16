@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'user_manager.dart';
 
 class GoldRates {
   final double gold24k;
@@ -53,8 +54,30 @@ class PriceService extends ValueNotifier<GoldRates> {
     notifyListeners();
 
     try {
-      // Fetch Gold (XAU) in INR
-      // Fetch Gold (XAU) and Silver (XAG) in INR with headers
+      // 1. Try fetching from Supabase for admin-defined rates
+      try {
+        final supabaseResponse = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'gold_rate_22kt')
+            .single();
+        
+        if (supabaseResponse != null) {
+          double customRate = double.parse(supabaseResponse['value']);
+          // If we have a custom rate, we might still want to fetch others or just use this
+          value = GoldRates(
+            gold24k: customRate * (24 / 22),
+            gold22k: customRate,
+            silver: value.silver,
+            updatedAt: DateTime.now(),
+          );
+          // If admin override is found, we might skip external fetch or just use it as priority
+        }
+      } catch (se) {
+        debugPrint('Supabase rate not found, using external API');
+      }
+
+      // 2. Fetch from External API
       final headers = {
         'Accept': 'application/json',
         'User-Agent': 'AmbalGoldApp/1.0',

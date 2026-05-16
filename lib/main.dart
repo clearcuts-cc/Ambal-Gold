@@ -5,8 +5,17 @@ import 'splash_screen.dart';
 import 'language_manager.dart';
 import 'user_manager.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Supabase initialization with provided credentials
+  await Supabase.initialize(
+    url: 'https://decmmsfawbzyeonnicgu.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlY21tc2Zhd2J6eWVvbm5pY2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MDQyNTAsImV4cCI6MjA5NDQ4MDI1MH0.wvHzjPmk_h3snv8BIrX9J3LeN7FMAfIsU5BLtQMFNmg',
+  );
+
   final prefs = await SharedPreferences.getInstance();
   languageNotifier.value = prefs.getString('user_lang') ?? 'English';
   await userNotifier.loadUser();
